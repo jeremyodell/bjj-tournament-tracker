@@ -74,7 +74,10 @@ npm run dev
 | `npm run dev:setup` | First-time setup: DynamoDB + table + seed data |
 | `npm run db:create` | Create DynamoDB table |
 | `npm run db:seed` | Fetch tournaments from IBJJF/JJWL and populate DB |
+| `npm run db:seed:mock` | Seed with mock tournament data (recommended for testing) |
 | `npm run db:reset` | Delete all data and re-seed |
+
+**Note:** The real fetchers (`db:seed`) may fail if external APIs are unavailable. Use `db:seed:mock` for reliable local testing.
 
 ## API Endpoints (Local)
 
@@ -104,6 +107,11 @@ curl "http://localhost:3001/api/tournaments?org=IBJJF&gi=true&limit=10"
 ```
 
 ## DynamoDB Local
+
+DynamoDB Local runs in **in-memory mode** for simplicity. This means:
+- Data is cleared when the container restarts
+- Run `npm run db:create && npm run db:seed:mock` after restarting Docker
+- No volume permission issues
 
 ### Accessing the Database
 

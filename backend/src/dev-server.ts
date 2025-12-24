@@ -9,15 +9,15 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import type { APIGatewayProxyEvent, Context, APIGatewayProxyResult } from 'aws-lambda';
 
-// Configure DynamoDB for local
-process.env.DYNAMODB_ENDPOINT = process.env.DYNAMODB_ENDPOINT || 'http://localhost:8000';
+// Configure DynamoDB for local - MUST be set before any imports that use AWS SDK
+process.env.DYNAMODB_ENDPOINT = process.env.DYNAMODB_ENDPOINT || 'http://127.0.0.1:8000';
 process.env.DYNAMODB_TABLE = process.env.DYNAMODB_TABLE || 'bjj-tournament-tracker';
 process.env.AWS_REGION = 'local';
 process.env.AWS_ACCESS_KEY_ID = 'local';
 process.env.AWS_SECRET_ACCESS_KEY = 'local';
 
-// Import handlers after setting env vars
-import { handler as tournamentsHandler } from './handlers/tournaments.js';
+// Import handlers dynamically after setting env vars
+const { handler: tournamentsHandler } = await import('./handlers/tournaments.js');
 
 const app = express();
 const PORT = process.env.PORT || 3001;

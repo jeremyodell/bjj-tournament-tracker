@@ -1,21 +1,14 @@
-version: '3.8'
-
 services:
   dynamodb-local:
     image: amazon/dynamodb-local:latest
     container_name: bjj-dynamodb-local
     ports:
       - "8000:8000"
-    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data"
-    volumes:
-      - dynamodb-data:/home/dynamodblocal/data
+    # Use in-memory mode for local dev (data cleared on restart, but we seed anyway)
+    command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
     working_dir: /home/dynamodblocal
     healthcheck:
       test: ["CMD-SHELL", "curl -s http://localhost:8000 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
-
-volumes:
-  dynamodb-data:
-    driver: local
