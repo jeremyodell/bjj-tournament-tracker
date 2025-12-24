@@ -213,22 +213,4 @@ backend/
 
 ## Backlog
 
-> Items below are planned but not yet implemented. Transfer to project management tool as needed.
-
-### High Priority
-
-- [ ] **Unit tests for tournament handler** - Write tests for GET /tournaments and GET /tournaments/:id with mocked DynamoDB
-- [ ] **Test utilities** - Create mockAPIGatewayEvent and mockContext helpers
-- [ ] **SAM template** - Create template.yaml with Lambda function and API Gateway definitions
-
-### Medium Priority
-
-- [ ] **Sample event files** - Create JSON files for testing with SAM local invoke
-- [ ] **Integration tests** - Tests that run against local DynamoDB
-- [ ] **CI/CD pipeline** - GitHub Actions workflow for test + deploy
-
-### Low Priority
-
-- [ ] **SAM Local documentation** - Add SAM Local commands to LOCAL-DEV.md
-- [ ] **Performance testing** - Cold start benchmarks, memory optimization
-- [ ] **Canary deployments** - Gradual rollout strategy
+See [BACKLOG.md](./BACKLOG.md#lambda--testing) for planned work related to Lambda testing.
