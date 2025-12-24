@@ -1,4 +1,4 @@
-import { QueryCommand, BatchWriteCommand } from '@aws-sdk/lib-dynamodb';
+import { QueryCommand, BatchWriteCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { docClient, TABLE_NAME, GSI1_NAME } from './client.js';
 import { buildTournamentPK } from './types.js';
 import type { TournamentItem } from './types.js';
@@ -93,6 +93,24 @@ export function buildGSI1Query(filters: TournamentFilters): {
     KeyConditionExpression: 'GSI1PK = :pk',
     ExpressionAttributeValues: values,
   };
+}
+
+/**
+ * Get a single tournament by its PK (e.g., "TOURN#IBJJF#123")
+ */
+export async function getTournamentById(
+  pk: string
+): Promise<TournamentItem | null> {
+  const command = new GetCommand({
+    TableName: TABLE_NAME,
+    Key: {
+      PK: pk,
+      SK: 'META',
+    },
+  });
+
+  const result = await docClient.send(command);
+  return (result.Item as TournamentItem) || null;
 }
 
 export async function queryTournaments(

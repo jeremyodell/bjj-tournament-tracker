@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { queryTournaments } from '../db/queries.js';
+import { queryTournaments, getTournamentById } from '../db/queries.js';
 import { NotFoundError } from '../shared/errors.js';
 import type { TournamentItem } from '../db/types.js';
 import type { TournamentFilters } from '../db/queries.js';
@@ -87,9 +87,7 @@ export async function listTournaments(
 }
 
 export async function getTournament(id: string): Promise<TournamentResponse> {
-  // Query by PK
-  const { items } = await queryTournaments({}, 1);
-  const item = items.find((t) => t.PK === id);
+  const item = await getTournamentById(id);
 
   if (!item) {
     throw new NotFoundError('Tournament');
