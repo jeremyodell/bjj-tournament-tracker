@@ -19,8 +19,8 @@ Central location for planned work across the BJJ Tournament Tracker project.
 ### Medium Priority
 
 - [x] **Sample event files** - ✅ Complete (2025-12-24): Created `backend/events/*.json` for SAM local invoke
-- [ ] **Integration tests** - Tests that run against local DynamoDB
-- [ ] **CI/CD pipeline** - GitHub Actions workflow for test + deploy
+- [x] **Integration tests** - ✅ Complete (2025-12-24): 15 passing tests with DynamoDB Local
+- [x] **CI/CD pipeline** - ✅ Complete (2025-12-24): GitHub Actions workflow for test + deploy to AWS
 
 ### Low Priority
 
