@@ -27,7 +27,10 @@ describe('mapIBJJFToTournament', () => {
     endDay: 17,
     month: 'Mar',
     year: 2025,
-    eventGroups: ['GI', 'NOGI'],
+    eventGroups: [
+      { id: 1, name: 'GI' },
+      { id: 2, name: 'NO-GI' },
+    ],
     pageUrl: '/events/pan-2025',
   };
 
@@ -53,7 +56,10 @@ describe('mapIBJJFToTournament', () => {
   });
 
   it('detects kids from eventGroups', () => {
-    const kidsEvent = { ...baseEvent, eventGroups: ['KIDS'] };
+    const kidsEvent = {
+      ...baseEvent,
+      eventGroups: [{ id: 3, name: 'KIDS' }],
+    };
     const result = mapIBJJFToTournament(kidsEvent);
     expect(result.kids).toBe(true);
   });

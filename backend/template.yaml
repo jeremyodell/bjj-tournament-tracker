@@ -1,0 +1,227 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: BJJ Tournament Tracker Backend - Serverless API
+
+Globals:
+  Function:
+    Timeout: 30
+    Runtime: nodejs20.x
+    MemorySize: 256
+    Environment:
+      Variables:
+        DYNAMODB_TABLE: !Ref TournamentsTable
+        NODE_OPTIONS: --enable-source-maps
+    Architectures:
+      - x86_64
+
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Deployment stage
+
+  EnableScheduledSync:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Enable daily scheduled tournament sync
+
+Resources:
+  # ============================================
+  # DynamoDB Table
+  # ============================================
+  TournamentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub bjj-tournament-tracker-${Stage}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Project
+          Value: bjj-tournament-tracker
+        - Key: Environment
+          Value: !Ref Stage
+
+  # ============================================
+  # API Gateway
+  # ============================================
+  TournamentsApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub bjj-tournament-tracker-api-${Stage}
+      StageName: !Ref Stage
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+      # Rate limiting
+      MethodSettings:
+        - ResourcePath: /*
+          HttpMethod: '*'
+          ThrottlingBurstLimit: 100
+          ThrottlingRateLimit: 60
+
+  # ============================================
+  # Lambda Functions
+  # ============================================
+  TournamentsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub bjj-tournament-tracker-tournaments-${Stage}
+      Handler: dist/handlers/tournaments.handler
+      CodeUri: .
+      Description: Handles tournament list and detail requests
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TournamentsTable
+      Events:
+        ListTournaments:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /tournaments
+            Method: GET
+        GetTournament:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /tournaments/{id}
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/tournaments.ts
+        External:
+          - '@aws-sdk/*'
+
+  SyncFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub bjj-tournament-tracker-sync-${Stage}
+      Handler: dist/handlers/sync.handler
+      CodeUri: .
+      Description: Syncs tournament data from IBJJF and JJWL
+      Timeout: 120
+      MemorySize: 512
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TournamentsTable
+      Events:
+        ScheduledSync:
+          Type: Schedule
+          Properties:
+            Enabled: !Equals
+              - !Ref EnableScheduledSync
+              - 'true'
+            Schedule: cron(0 7 * * ? *)
+            Description: Daily tournament sync at 7 AM UTC
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/sync.ts
+        External:
+          - '@aws-sdk/*'
+          - puppeteer-core
+
+  # ============================================
+  # CloudWatch Alarms (Optional)
+  # ============================================
+  TournamentsFunctionErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: IsProd
+    Properties:
+      AlarmName: !Sub ${Stage}-tournaments-function-errors
+      AlarmDescription: Alarm when Tournaments function has errors
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref TournamentsFunction
+
+  SyncFunctionErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: IsProd
+    Properties:
+      AlarmName: !Sub ${Stage}-sync-function-errors
+      AlarmDescription: Alarm when Sync function has errors
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref SyncFunction
+
+Conditions:
+  IsProd: !Equals
+    - !Ref Stage
+    - prod
+
+Outputs:
+  TournamentsApiUrl:
+    Description: API Gateway endpoint URL for Tournaments API
+    Value: !Sub https://${TournamentsApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
+
+  TournamentsApiId:
+    Description: API Gateway API ID
+    Value: !Ref TournamentsApi
+
+  TournamentsFunctionArn:
+    Description: Tournaments Lambda Function ARN
+    Value: !GetAtt TournamentsFunction.Arn
+
+  SyncFunctionArn:
+    Description: Sync Lambda Function ARN
+    Value: !GetAtt SyncFunction.Arn
+
+  DynamoDBTableName:
+    Description: DynamoDB Table Name
+    Value: !Ref TournamentsTable
+
+  DynamoDBTableArn:
+    Description: DynamoDB Table ARN
+    Value: !GetAtt TournamentsTable.Arn

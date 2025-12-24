@@ -1,0 +1,35 @@
+# SAM CLI Configuration for BJJ Tournament Tracker
+
+version = 0.1
+
+[default.global.parameters]
+stack_name = "bjj-tournament-tracker"
+
+[default.build.parameters]
+cached = true
+parallel = true
+
+[default.deploy.parameters]
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = true
+resolve_s3 = true
+region = "us-east-1"
+parameter_overrides = "Stage=dev EnableScheduledSync=false"
+
+[default.local_invoke.parameters]
+env_vars = "env.json"
+
+[default.local_start_api.parameters]
+warm_containers = "EAGER"
+env_vars = "env.json"
+
+# Production configuration
+[prod]
+
+[prod.deploy.parameters]
+stack_name = "bjj-tournament-tracker-prod"
+s3_prefix = "bjj-tournament-tracker-prod"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Stage=prod EnableScheduledSync=true"

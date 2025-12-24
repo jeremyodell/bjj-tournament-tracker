@@ -1,7 +1,8 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 
-const isLocal = process.env.DYNAMODB_ENDPOINT?.includes('localhost');
+const isLocal = process.env.DYNAMODB_ENDPOINT?.includes('localhost') ||
+                 process.env.DYNAMODB_ENDPOINT?.includes('127.0.0.1');
 
 const client = new DynamoDBClient({
   region: process.env.AWS_REGION || 'us-east-1',

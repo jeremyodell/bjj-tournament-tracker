@@ -1,0 +1,34 @@
+{
+  "httpMethod": "GET",
+  "path": "/tournaments/TOURN#IBJJF#123",
+  "queryStringParameters": null,
+  "pathParameters": {
+    "id": "TOURN#IBJJF#123"
+  },
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": null,
+  "isBase64Encoded": false,
+  "requestContext": {
+    "accountId": "123456789012",
+    "apiId": "test-api-id",
+    "authorizer": null,
+    "httpMethod": "GET",
+    "identity": {
+      "sourceIp": "127.0.0.1",
+      "userAgent": "test-agent"
+    },
+    "path": "/tournaments/TOURN#IBJJF#123",
+    "protocol": "HTTP/1.1",
+    "requestId": "test-request-id",
+    "requestTimeEpoch": 1640000000000,
+    "resourceId": "test-resource-id",
+    "resourcePath": "/tournaments/{id}",
+    "stage": "dev"
+  },
+  "resource": "/tournaments/{id}",
+  "stageVariables": null,
+  "multiValueHeaders": {},
+  "multiValueQueryStringParameters": null
+}

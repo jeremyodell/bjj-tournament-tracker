@@ -13,8 +13,8 @@ import {
 const TABLE_NAME = process.env.DYNAMODB_TABLE || 'bjj-tournament-tracker';
 
 const client = new DynamoDBClient({
-  region: 'local',
-  endpoint: process.env.DYNAMODB_ENDPOINT || 'http://localhost:8000',
+  region: 'us-east-1',
+  endpoint: process.env.DYNAMODB_ENDPOINT || 'http://127.0.0.1:8000',
   credentials: {
     accessKeyId: 'local',
     secretAccessKey: 'local',

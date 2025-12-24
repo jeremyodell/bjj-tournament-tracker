@@ -12,13 +12,13 @@ Central location for planned work across the BJJ Tournament Tracker project.
 
 ### High Priority
 
-- [ ] **Unit tests for tournament handler** - Write tests for GET /tournaments and GET /tournaments/:id with mocked DynamoDB
-- [ ] **Test utilities** - Create mockAPIGatewayEvent and mockContext helpers
-- [ ] **SAM template** - Create template.yaml with Lambda function and API Gateway definitions
+- [x] **Unit tests for tournament handler** - ✅ Complete (2025-12-24): Comprehensive tests for GET /tournaments and GET /tournaments/:id with mocked services
+- [x] **Test utilities** - ✅ Complete (2025-12-24): Created mockAPIGatewayEvent, mockContext, mockTournamentResponse helpers in `backend/src/__tests__/utils/testHelpers.ts`
+- [x] **SAM template** - ✅ Complete (2025-12-24): Created `backend/template.yaml` with TournamentsFunction, SyncFunction, DynamoDB, API Gateway
 
 ### Medium Priority
 
-- [ ] **Sample event files** - Create JSON files for testing with SAM local invoke
+- [x] **Sample event files** - ✅ Complete (2025-12-24): Created `backend/events/*.json` for SAM local invoke
 - [ ] **Integration tests** - Tests that run against local DynamoDB
 - [ ] **CI/CD pipeline** - GitHub Actions workflow for test + deploy
 
@@ -34,16 +34,37 @@ Central location for planned work across the BJJ Tournament Tracker project.
 
 *Source: Backend fetchers for tournament data*
 
+### Investigation Findings (2025-12-24)
+
+**IBJJF Fetcher (`backend/src/fetchers/ibjjfFetcher.ts`)**
+
+| Item | Details |
+|------|---------|
+| Endpoint | `https://ibjjf.com/api/v1/events/calendar.json` (correct) |
+| Error | HTTP 406 with `{"error":"Denied"}` |
+| Root Cause | Bot protection blocks non-browser requests. Works in browser but fails from curl/axios even with identical headers and session cookies. Likely TLS fingerprinting or JavaScript challenge verification. |
+| Options | 1) Use headless browser (Puppeteer/Playwright) 2) Use browser automation service 3) Contact IBJJF for API access 4) Scrape HTML calendar page directly |
+
+**JJWL Fetcher (`backend/src/fetchers/jjwlFetcher.ts`)**
+
+| Item | Details |
+|------|---------|
+| Old Endpoint | `https://www.jjworldleague.com/ajax/new_load_events.php` |
+| Error | Returns `null` with HTTP 200 (causes `null.map()` TypeError) |
+| Root Cause | API endpoint deprecated or moved. Site now references `https://hermes.jjworldleague.com/endpoint2/` for event data. |
+| Options | 1) Find correct Hermes API parameters 2) Scrape HTML from homepage 3) Reverse-engineer frontend JS to find API calls |
+
 ### High Priority
 
-- [ ] **Fix IBJJF fetcher** - Currently returns 406 error, needs updated headers/approach
-- [ ] **Fix JJWL fetcher** - Currently returns null, API may have changed
+- [x] **Fix IBJJF fetcher** - ✅ RESOLVED: Using Puppeteer to intercept API response (558 tournaments)
+- [x] **Fix JJWL fetcher** - ✅ RESOLVED: Using Puppeteer with HTML scraping fallback (40 tournaments)
 
 ### Medium Priority
 
 - [ ] **Add fetcher retry logic** - Exponential backoff for transient failures
 - [ ] **Add fetcher caching** - Cache responses to reduce API calls
 - [ ] **Scheduled refresh** - Lambda to refresh tournament data periodically
+- [ ] **Null response handling** - Gracefully handle null/empty API responses without throwing
 
 ---
 
@@ -53,9 +74,9 @@ Central location for planned work across the BJJ Tournament Tracker project.
 
 ### High Priority
 
-- [ ] **Error states** - Show user-friendly errors when API fails
-- [ ] **Loading skeletons** - Improve perceived performance
-- [ ] **Mobile responsive** - Test and fix mobile layouts
+- [x] **Error states** - ✅ Complete (2025-12-24): Created ErrorState and EmptyState components with retry functionality
+- [x] **Loading skeletons** - ✅ Complete (2025-12-24): Created TournamentCardSkeleton that matches card structure
+- [x] **Mobile responsive** - ✅ Complete (2025-12-24): Updated TournamentCard, TournamentFilters, TournamentList with responsive layouts
 
 ### Medium Priority
 

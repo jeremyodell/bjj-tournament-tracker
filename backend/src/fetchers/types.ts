@@ -1,3 +1,8 @@
+export interface IBJJFEventGroup {
+  id: number;
+  name: string;
+}
+
 export interface IBJJFEvent {
   id: number;
   name: string;
@@ -8,8 +13,9 @@ export interface IBJJFEvent {
   endDay: number;
   month: string;
   year: number;
-  eventGroups: string[];
-  pageUrl: string;
+  eventGroups: IBJJFEventGroup[];
+  pageUrl: string | null;
+  status?: string;
 }
 
 export interface JJWLEvent {
