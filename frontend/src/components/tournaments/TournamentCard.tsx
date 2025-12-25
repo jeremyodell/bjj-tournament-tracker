@@ -7,18 +7,6 @@ interface TournamentCardProps {
 }
 
 export function TournamentCard({ tournament }: TournamentCardProps) {
-  const formatDateRange = (start: string, end: string) => {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-
-    if (start === end) {
-      return startDate.toLocaleDateString('en-US', { ...options, year: 'numeric' });
-    }
-
-    return `${startDate.toLocaleDateString('en-US', options)} - ${endDate.toLocaleDateString('en-US', { ...options, year: 'numeric' })}`;
-  };
-
   const getDaysUntil = (start: string) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
