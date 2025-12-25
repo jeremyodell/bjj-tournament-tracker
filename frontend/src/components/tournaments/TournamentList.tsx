@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTournaments } from '@/hooks/useTournaments';
 import { TournamentCard } from './TournamentCard';
 import { TournamentGridSkeleton } from './TournamentCardSkeleton';
@@ -25,6 +25,16 @@ export function TournamentList({ filters = {}, onClearFilters }: TournamentListP
   } = useTournaments(filters);
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [hasAnimated, setHasAnimated] = useState(false);
+
+  const tournaments = data?.pages.flatMap((page) => page.tournaments) ?? [];
+
+  // Set hasAnimated flag on initial load
+  useEffect(() => {
+    if (tournaments.length > 0 && !hasAnimated) {
+      setHasAnimated(true);
+    }
+  }, [tournaments.length, hasAnimated]);
 
   // IntersectionObserver for infinite scroll
   useEffect(() => {
@@ -65,8 +75,6 @@ export function TournamentList({ filters = {}, onClearFilters }: TournamentListP
     );
   }
 
-  const tournaments = data?.pages.flatMap((page) => page.tournaments) ?? [];
-
   // Empty state
   if (tournaments.length === 0) {
     const hasActiveFilters = Object.values(filters).some(
@@ -102,8 +110,8 @@ export function TournamentList({ filters = {}, onClearFilters }: TournamentListP
         {tournaments.map((tournament, index) => (
           <div
             key={tournament.id}
-            className="animate-fade-in-up opacity-0"
-            style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'forwards' }}
+            className={hasAnimated ? '' : 'animate-fade-in-up opacity-0'}
+            style={!hasAnimated ? { animationDelay: `${index * 100}ms`, animationFillMode: 'forwards' } : {}}
           >
             <TournamentCard tournament={tournament} />
           </div>

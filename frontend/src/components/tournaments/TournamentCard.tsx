@@ -56,11 +56,34 @@ export function TournamentCard({ tournament, index }: TournamentCardProps) {
         animationDelay: `${(index || 0) * 100}ms`,
       }}
     >
-      <div className="p-6 flex gap-6">
+      <div className="p-4 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
         {/* DATE BLOCK - Hero Element */}
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 flex sm:block items-center gap-3 sm:gap-0">
+          {/* Mobile: horizontal layout */}
+          <div className="sm:hidden flex items-center gap-2 px-4 py-2 rounded-xl border-l-2 border-t border-r border-b transition-all duration-300"
+            style={{
+              background: 'rgba(255, 255, 255, 0.03)',
+              borderLeftColor: accentColor,
+              borderTopColor: 'var(--glass-border)',
+              borderRightColor: 'var(--glass-border)',
+              borderBottomColor: 'var(--glass-border)',
+            }}
+          >
+            <div className="text-xs font-medium opacity-60 tracking-wider">{month}</div>
+            <div
+              className="text-2xl font-bold leading-none transition-colors duration-300"
+              style={{ color: accentColor }}
+            >
+              {day}
+            </div>
+            <div className="text-xs font-medium opacity-40">{year}</div>
+            <div className="text-xs font-medium opacity-60">•</div>
+            <div className="text-xs font-medium opacity-60 tracking-wider">{weekday}</div>
+          </div>
+
+          {/* Desktop: vertical layout */}
           <div
-            className="flex flex-col items-center justify-center w-24 h-28 rounded-xl border-l-2 border-t border-r border-b transition-all duration-300 relative"
+            className="hidden sm:flex flex-col items-center justify-center w-24 h-28 rounded-xl border-l-2 border-t border-r border-b transition-all duration-300 relative"
             style={{
               background: 'rgba(255, 255, 255, 0.03)',
               borderLeftColor: accentColor,
