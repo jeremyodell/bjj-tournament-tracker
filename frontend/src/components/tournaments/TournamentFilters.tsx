@@ -53,12 +53,12 @@ export function TournamentFilters({ filters, onFiltersChange }: TournamentFilter
     filters.search;
 
   return (
-    <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+    <div className="space-y-4 p-6 bg-[var(--glass-bg)] backdrop-blur-xl border border-[var(--glass-border)] rounded-2xl">
       {/* Search form - stacks on mobile */}
       <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
           <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -74,10 +74,10 @@ export function TournamentFilters({ filters, onFiltersChange }: TournamentFilter
             placeholder="Search tournaments..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
+            className="pl-10 bg-white/5 border-white/10 placeholder:text-white/40 text-white focus-visible:ring-white/20 focus-visible:border-white/30"
           />
         </div>
-        <Button type="submit" className="w-full sm:w-auto">
+        <Button type="submit" className="w-full sm:w-auto bg-white/5 border border-white/10 text-white/80 hover:bg-white/10">
           Search
         </Button>
       </form>
@@ -86,12 +86,12 @@ export function TournamentFilters({ filters, onFiltersChange }: TournamentFilter
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
         {/* Organization select */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground whitespace-nowrap">Org:</span>
+          <span className="text-sm text-white/50 whitespace-nowrap">Org:</span>
           <Select value={filters.org || 'all'} onValueChange={handleOrgChange}>
-            <SelectTrigger className="w-[120px]">
+            <SelectTrigger className="w-[120px] bg-white/5 border-white/10 text-white">
               <SelectValue placeholder="Organization" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-[#0A0A1A] border-white/10 text-white">
               <SelectItem value="all">All Orgs</SelectItem>
               <SelectItem value="IBJJF">IBJJF</SelectItem>
               <SelectItem value="JJWL">JJWL</SelectItem>
@@ -100,33 +100,45 @@ export function TournamentFilters({ filters, onFiltersChange }: TournamentFilter
         </div>
 
         {/* Divider for larger screens */}
-        <div className="hidden sm:block h-6 w-px bg-border" />
+        <div className="hidden sm:block h-6 w-px bg-white/10" />
 
         {/* Format toggle buttons */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground whitespace-nowrap">Format:</span>
+          <span className="text-sm text-white/50 whitespace-nowrap">Format:</span>
           <div className="flex gap-1.5">
             <Button
-              variant={filters.gi ? 'default' : 'outline'}
+              variant="outline"
               size="sm"
               onClick={() => handleFormatChange('gi')}
-              className="min-w-[50px]"
+              className={`min-w-[50px] ${
+                filters.gi
+                  ? 'bg-[#00F0FF]/20 text-[#00F0FF] border-[#00F0FF]/30 hover:bg-[#00F0FF]/30'
+                  : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10'
+              }`}
             >
               GI
             </Button>
             <Button
-              variant={filters.nogi ? 'default' : 'outline'}
+              variant="outline"
               size="sm"
               onClick={() => handleFormatChange('nogi')}
-              className="min-w-[60px]"
+              className={`min-w-[60px] ${
+                filters.nogi
+                  ? 'bg-[#00F0FF]/20 text-[#00F0FF] border-[#00F0FF]/30 hover:bg-[#00F0FF]/30'
+                  : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10'
+              }`}
             >
               NOGI
             </Button>
             <Button
-              variant={filters.kids ? 'default' : 'outline'}
+              variant="outline"
               size="sm"
               onClick={() => handleFormatChange('kids')}
-              className="min-w-[50px]"
+              className={`min-w-[50px] ${
+                filters.kids
+                  ? 'bg-[#00F0FF]/20 text-[#00F0FF] border-[#00F0FF]/30 hover:bg-[#00F0FF]/30'
+                  : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10'
+              }`}
             >
               Kids
             </Button>
@@ -137,13 +149,13 @@ export function TournamentFilters({ filters, onFiltersChange }: TournamentFilter
         {hasActiveFilters && (
           <>
             {/* Divider for larger screens */}
-            <div className="hidden sm:block h-6 w-px bg-border" />
+            <div className="hidden sm:block h-6 w-px bg-white/10" />
 
             <Button
               variant="ghost"
               size="sm"
               onClick={handleClear}
-              className="text-muted-foreground hover:text-foreground self-start sm:self-center"
+              className="text-white/60 hover:text-white hover:bg-white/10 self-start sm:self-center"
             >
               <svg
                 className="h-4 w-4 mr-1"
@@ -166,7 +178,7 @@ export function TournamentFilters({ filters, onFiltersChange }: TournamentFilter
 
       {/* Active filters summary for mobile */}
       {hasActiveFilters && (
-        <div className="sm:hidden text-xs text-muted-foreground">
+        <div className="sm:hidden text-xs text-white/50">
           Active filters:{' '}
           {[
             filters.org,
