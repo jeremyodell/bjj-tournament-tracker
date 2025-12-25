@@ -68,6 +68,18 @@ Central location for planned work across the BJJ Tournament Tracker project.
 
 ---
 
+## Bugs
+
+*Assigned to: Carson*
+
+### High Priority
+
+- [ ] **Show year on tournament cards** - The date display is missing the year, making it unclear which year tournaments are in
+- [ ] **JJWL tournaments not showing** - Investigate why JJWL tournaments are not appearing in the UI (fetcher working? data in DB?)
+- [ ] **Filter to future tournaments only** - Add API endpoint/filter to only return upcoming tournaments, exclude past events from default view
+
+---
+
 ## Frontend
 
 *Source: [Implementation Plan](./plans/2025-12-24-implementation-plan.md)*
