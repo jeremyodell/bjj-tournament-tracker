@@ -1,13 +1,14 @@
 // frontend/src/app/layout.tsx
 import type { Metadata } from 'next';
-import { Plus_Jakarta_Sans } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 import { Providers } from './providers';
 
-const satoshi = Plus_Jakarta_Sans({
-  subsets: ['latin'],
+const satoshi = localFont({
+  src: '../../public/fonts/Satoshi-Variable.woff2',
   variable: '--font-satoshi',
   display: 'swap',
+  weight: '300 900',
 });
 
 export const metadata: Metadata = {
@@ -22,7 +23,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className={satoshi.className}>
+      <body className={satoshi.variable} style={{ fontFamily: 'var(--font-satoshi)' }}>
         <Providers>{children}</Providers>
       </body>
     </html>

@@ -56,9 +56,17 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Variable.woff2') format('woff2-variations');
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   /* Midnight Arena Design System - Dark Mode Default */
-  --font-satoshi: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-satoshi: 'Satoshi', ui-sans-serif, system-ui, sans-serif;
 
   /* Border radius */
   --radius: 0.75rem;
@@ -70,15 +78,15 @@
   /* Glassmorphic surfaces */
   --glass-bg: rgba(255, 255, 255, 0.03);
   --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-blur: 12px;
+  --glass-blur: 20px;
 
   /* Brand accent colors */
-  --accent-ibjjf: #00f0ff; /* Electric Cyan */
-  --accent-jjwl: #ff2d6a; /* Hot Magenta */
+  --accent-ibjjf: #00F0FF; /* Electric Cyan */
+  --accent-jjwl: #FF2D6A; /* Hot Magenta */
 
   /* Glow effects for cards */
-  --glow-ibjjf: 0 0 20px rgba(0, 240, 255, 0.3);
-  --glow-jjwl: 0 0 20px rgba(255, 45, 106, 0.3);
+  --glow-ibjjf: 0 0 30px rgba(0, 240, 255, 0.3);
+  --glow-jjwl: 0 0 30px rgba(255, 45, 106, 0.3);
 
   /* Card surfaces with glassmorphism */
   --card: rgba(255, 255, 255, 0.03);
