@@ -4,9 +4,10 @@ import type { Tournament } from '@/lib/types';
 
 interface TournamentCardProps {
   tournament: Tournament;
+  index?: number;
 }
 
-export function TournamentCard({ tournament }: TournamentCardProps) {
+export function TournamentCard({ tournament, index }: TournamentCardProps) {
   const getDaysUntil = (start: string) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -42,6 +43,7 @@ export function TournamentCard({ tournament }: TournamentCardProps) {
   const month = startDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
   const day = startDate.getDate();
   const weekday = startDate.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+  const year = startDate.getFullYear();
 
   return (
     <div
@@ -51,16 +53,20 @@ export function TournamentCard({ tournament }: TournamentCardProps) {
         borderColor: 'var(--glass-border)',
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
+        animationDelay: `${(index || 0) * 100}ms`,
       }}
     >
       <div className="p-6 flex gap-6">
         {/* DATE BLOCK - Hero Element */}
         <div className="flex-shrink-0">
           <div
-            className="flex flex-col items-center justify-center w-24 h-24 rounded-xl border transition-all duration-300"
+            className="flex flex-col items-center justify-center w-24 h-28 rounded-xl border-l-2 border-t border-r border-b transition-all duration-300 relative"
             style={{
               background: 'rgba(255, 255, 255, 0.03)',
-              borderColor: 'var(--glass-border)',
+              borderLeftColor: accentColor,
+              borderTopColor: 'var(--glass-border)',
+              borderRightColor: 'var(--glass-border)',
+              borderBottomColor: 'var(--glass-border)',
             }}
           >
             <div className="text-xs font-medium opacity-60 tracking-wider">{month}</div>
@@ -71,6 +77,7 @@ export function TournamentCard({ tournament }: TournamentCardProps) {
               {day}
             </div>
             <div className="text-xs font-medium opacity-60 tracking-wider">{weekday}</div>
+            <div className="text-[10px] font-medium opacity-40 mt-0.5">{year}</div>
           </div>
         </div>
 
@@ -140,35 +147,17 @@ export function TournamentCard({ tournament }: TournamentCardProps) {
             {/* Event type tags */}
             <div className="flex flex-wrap gap-2">
               {tournament.gi && (
-                <div
-                  className="px-2.5 py-1 rounded-md text-xs font-medium"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid var(--glass-border)',
-                  }}
-                >
+                <div className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
                   GI
                 </div>
               )}
               {tournament.nogi && (
-                <div
-                  className="px-2.5 py-1 rounded-md text-xs font-medium"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid var(--glass-border)',
-                  }}
-                >
+                <div className="px-3 py-1 rounded-full text-xs font-medium bg-orange-500/10 text-orange-400 border border-orange-500/20">
                   NOGI
                 </div>
               )}
               {tournament.kids && (
-                <div
-                  className="px-2.5 py-1 rounded-md text-xs font-medium"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid var(--glass-border)',
-                  }}
-                >
+                <div className="px-3 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">
                   KIDS
                 </div>
               )}
@@ -180,16 +169,16 @@ export function TournamentCard({ tournament }: TournamentCardProps) {
                 href={tournament.registrationUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 hover:scale-105"
+                className="group/button flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 hover:scale-105"
                 style={{
-                  background: `${accentColor}20`,
+                  background: `${accentColor}30`,
                   color: accentColor,
-                  border: `1px solid ${accentColor}40`,
+                  border: `1px solid ${accentColor}50`,
                 }}
               >
                 <span>View</span>
                 <svg
-                  className="h-4 w-4"
+                  className="h-4 w-4 transition-transform duration-300 group-hover/button:translate-x-1"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
