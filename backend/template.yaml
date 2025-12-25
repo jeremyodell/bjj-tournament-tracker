@@ -148,15 +148,7 @@ Resources:
             Schedule: cron(0 7 * * ? *)
             Description: Daily tournament sync at 7 AM UTC
     Metadata:
-      BuildMethod: esbuild
-      BuildProperties:
-        Minify: true
-        Target: es2022
-        Sourcemap: true
-        EntryPoints:
-          - src/handlers/sync.ts
-        External:
-          - '@aws-sdk/*'
+      BuildMethod: makefile
 
   # ============================================
   # CloudWatch Alarms (Optional)
