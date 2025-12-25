@@ -1,8 +1,5 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-
 interface ErrorStateProps {
   title?: string;
   message: string;
@@ -15,12 +12,19 @@ export function ErrorState({
   onRetry,
 }: ErrorStateProps) {
   return (
-    <Card className="border-destructive/50 bg-destructive/5">
-      <CardContent className="flex flex-col items-center justify-center py-12 px-4 text-center">
-        {/* Error icon */}
-        <div className="rounded-full bg-destructive/10 p-3 mb-4">
+    <div
+      className="rounded-2xl border p-8"
+      style={{
+        background: 'rgba(255, 45, 106, 0.05)',
+        borderColor: 'rgba(255, 45, 106, 0.2)',
+        backdropFilter: 'blur(24px)',
+      }}
+    >
+      <div className="flex flex-col items-center justify-center text-center">
+        {/* Error icon with magenta accent */}
+        <div className="rounded-full p-4 mb-4" style={{ background: 'rgba(255, 45, 106, 0.1)' }}>
           <svg
-            className="h-6 w-6 text-destructive"
+            className="h-8 w-8 text-[#FF2D6A]"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -34,13 +38,21 @@ export function ErrorState({
           </svg>
         </div>
 
-        <h3 className="text-lg font-semibold text-destructive mb-2">{title}</h3>
-        <p className="text-sm text-muted-foreground mb-6 max-w-md">{message}</p>
+        <h3 className="text-xl font-semibold text-[#FF2D6A] mb-2">{title}</h3>
+        <p className="text-sm text-white/60 mb-6 max-w-md">{message}</p>
 
         {onRetry && (
-          <Button onClick={onRetry} variant="outline" size="sm">
+          <button
+            onClick={onRetry}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 hover:scale-105"
+            style={{
+              background: 'rgba(255, 45, 106, 0.2)',
+              color: '#FF2D6A',
+              border: '1px solid rgba(255, 45, 106, 0.3)',
+            }}
+          >
             <svg
-              className="h-4 w-4 mr-2"
+              className="h-4 w-4"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -53,10 +65,10 @@ export function ErrorState({
               />
             </svg>
             Try Again
-          </Button>
+          </button>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -75,12 +87,19 @@ export function EmptyState({
   action,
 }: EmptyStateProps) {
   return (
-    <Card className="border-dashed">
-      <CardContent className="flex flex-col items-center justify-center py-12 px-4 text-center">
-        {/* Empty icon */}
-        <div className="rounded-full bg-muted p-3 mb-4">
+    <div
+      className="rounded-2xl border border-dashed p-8"
+      style={{
+        background: 'var(--glass-bg)',
+        borderColor: 'rgba(255, 255, 255, 0.15)',
+        backdropFilter: 'blur(24px)',
+      }}
+    >
+      <div className="flex flex-col items-center justify-center text-center">
+        {/* Search icon with cyan accent */}
+        <div className="rounded-full p-4 mb-4" style={{ background: 'rgba(0, 240, 255, 0.1)' }}>
           <svg
-            className="h-6 w-6 text-muted-foreground"
+            className="h-8 w-8 text-[#00F0FF]"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -94,15 +113,23 @@ export function EmptyState({
           </svg>
         </div>
 
-        <h3 className="text-lg font-semibold mb-2">{title}</h3>
-        <p className="text-sm text-muted-foreground mb-6 max-w-md">{message}</p>
+        <h3 className="text-xl font-semibold text-white mb-2">{title}</h3>
+        <p className="text-sm text-white/60 mb-6 max-w-md">{message}</p>
 
         {action && (
-          <Button onClick={action.onClick} variant="outline" size="sm">
+          <button
+            onClick={action.onClick}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 hover:scale-105"
+            style={{
+              background: 'rgba(0, 240, 255, 0.2)',
+              color: '#00F0FF',
+              border: '1px solid rgba(0, 240, 255, 0.3)',
+            }}
+          >
             {action.label}
-          </Button>
+          </button>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
