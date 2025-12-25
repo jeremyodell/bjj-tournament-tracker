@@ -41,3 +41,4 @@ coverage/
 events-app/
 tournament_tracker_requirements*.md
 use-case-*.md
+backend/scripts/create-table-fetch.ts
