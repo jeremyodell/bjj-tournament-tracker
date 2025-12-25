@@ -33,3 +33,11 @@ coverage/
 
 # Misc
 *.tgz
+
+# Claude Code
+.claude/
+
+# Scratch files
+events-app/
+tournament_tracker_requirements*.md
+use-case-*.md
