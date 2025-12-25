@@ -13,20 +13,24 @@ export default function TournamentsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-4 sm:py-8 px-4">
-        {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold">BJJ Tournaments</h1>
-          <p className="text-muted-foreground mt-1">
-            Find upcoming Brazilian Jiu-Jitsu tournaments from IBJJF and JJWL
-          </p>
-        </div>
+    <div className="relative min-h-screen">
+      <div className="relative z-10">
+        <div className="container mx-auto max-w-7xl py-8 sm:py-12 px-4">
+          {/* Header */}
+          <div className="mb-8 sm:mb-12">
+            <h1 className="text-4xl sm:text-5xl font-bold text-white mb-3">
+              BJJ Tournaments
+            </h1>
+            <p className="text-white/60 text-lg">
+              Find upcoming Brazilian Jiu-Jitsu tournaments from IBJJF and JJWL
+            </p>
+          </div>
 
-        {/* Main content */}
-        <div className="space-y-6">
-          <TournamentFilters filters={filters} onFiltersChange={setFilters} />
-          <TournamentList filters={filters} onClearFilters={handleClearFilters} />
+          {/* Main content */}
+          <div className="space-y-6">
+            <TournamentFilters filters={filters} onFiltersChange={setFilters} />
+            <TournamentList filters={filters} onClearFilters={handleClearFilters} />
+          </div>
         </div>
       </div>
     </div>

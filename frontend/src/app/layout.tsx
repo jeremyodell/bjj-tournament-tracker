@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
 import { Providers } from './providers';
+import { AnimatedBackground } from '@/components/ui/AnimatedBackground';
 
 const satoshi = localFont({
   src: '../../public/fonts/Satoshi-Variable.woff2',
@@ -24,6 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={satoshi.variable} style={{ fontFamily: 'var(--font-satoshi)' }}>
+        <AnimatedBackground />
         <Providers>{children}</Providers>
       </body>
     </html>
