@@ -99,8 +99,14 @@ export function TournamentList({ filters = {}, onClearFilters }: TournamentListP
 
       {/* Responsive grid: 1 col on mobile, 2 on tablet, 3 on desktop */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {tournaments.map((tournament) => (
-          <TournamentCard key={tournament.id} tournament={tournament} />
+        {tournaments.map((tournament, index) => (
+          <div
+            key={tournament.id}
+            className="animate-fade-in-up opacity-0"
+            style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'forwards' }}
+          >
+            <TournamentCard tournament={tournament} />
+          </div>
         ))}
       </div>
 
