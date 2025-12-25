@@ -1,5 +1,5 @@
-import puppeteer from 'puppeteer';
 import type { JJWLEvent, NormalizedTournament } from './types.js';
+import { launchBrowser } from './browser.js';
 
 const JJWL_URL = 'https://www.jjworldleague.com/';
 
@@ -24,10 +24,7 @@ export function mapJJWLToTournament(event: JJWLEvent): NormalizedTournament {
 }
 
 export async function fetchJJWLTournaments(): Promise<NormalizedTournament[]> {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
+  const browser = await launchBrowser();
 
   try {
     const page = await browser.newPage();

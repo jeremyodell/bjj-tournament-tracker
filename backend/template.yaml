@@ -133,8 +133,8 @@ Resources:
       Handler: dist/handlers/sync.handler
       CodeUri: .
       Description: Syncs tournament data from IBJJF and JJWL
-      Timeout: 120
-      MemorySize: 512
+      Timeout: 180
+      MemorySize: 1536
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref TournamentsTable
@@ -157,7 +157,6 @@ Resources:
           - src/handlers/sync.ts
         External:
           - '@aws-sdk/*'
-          - puppeteer-core
 
   # ============================================
   # CloudWatch Alarms (Optional)

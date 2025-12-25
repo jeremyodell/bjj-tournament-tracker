@@ -1,5 +1,5 @@
-import puppeteer from 'puppeteer';
 import type { IBJJFEvent, NormalizedTournament } from './types.js';
+import { launchBrowser } from './browser.js';
 
 const IBJJF_CALENDAR_URL = 'https://ibjjf.com/events/calendar';
 const IBJJF_API_URL = 'https://ibjjf.com/api/v1/events/calendar.json';
@@ -40,10 +40,7 @@ export function mapIBJJFToTournament(event: IBJJFEvent): NormalizedTournament {
 }
 
 export async function fetchIBJJFTournaments(): Promise<NormalizedTournament[]> {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
+  const browser = await launchBrowser();
 
   try {
     const page = await browser.newPage();
