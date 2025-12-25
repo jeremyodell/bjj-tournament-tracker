@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,6 +19,7 @@ interface TournamentFiltersProps {
 
 export function TournamentFilters({ filters, onFiltersChange }: TournamentFiltersProps) {
   const [search, setSearch] = useState(filters.search || '');
+  const [, startTransition] = useTransition();
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,7 +74,10 @@ export function TournamentFilters({ filters, onFiltersChange }: TournamentFilter
           <Input
             placeholder="Search tournaments..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              startTransition(() => setSearch(value));
+            }}
             className="pl-10 bg-white/5 border-white/10 placeholder:text-white/40 text-white focus-visible:ring-white/20 focus-visible:border-white/30"
           />
         </div>
