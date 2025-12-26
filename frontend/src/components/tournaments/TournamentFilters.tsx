@@ -1,197 +1,236 @@
 'use client';
 
-import { useRef } from 'react';
-import { Input } from '@/components/ui/input';
+import { useEffect, useRef } from 'react';
+import { MapPin, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import type { TournamentFilters as Filters } from '@/lib/types';
+import { PresetButtonGroup } from '@/components/ui/preset-button';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { useFilterParams } from '@/hooks/useFilterParams';
 
-interface TournamentFiltersProps {
-  filters: Filters;
-  onFiltersChange: (filters: Filters) => void;
-}
+// In December, show next year since people are planning ahead
+const getYearLabel = () => {
+  const now = new Date();
+  const month = now.getMonth(); // 0-indexed, so December is 11
+  const year = month === 11 ? now.getFullYear() + 1 : now.getFullYear();
+  return String(year);
+};
 
-export function TournamentFilters({ filters, onFiltersChange }: TournamentFiltersProps) {
-  const searchRef = useRef<HTMLInputElement>(null);
+const DATE_OPTIONS = [
+  { value: 'month' as const, label: 'This Month' },
+  { value: '30' as const, label: '30 Days' },
+  { value: '60' as const, label: '60 Days' },
+  { value: '90' as const, label: '90 Days' },
+  { value: 'year' as const, label: getYearLabel() },
+];
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const searchValue = searchRef.current?.value || '';
-    onFiltersChange({ ...filters, search: searchValue || undefined });
-  };
+const DISTANCE_OPTIONS = [
+  { value: 50 as const, label: '50mi' },
+  { value: 100 as const, label: '100mi' },
+  { value: 250 as const, label: '250mi' },
+  { value: 'any' as const, label: 'Any' },
+];
 
-  const handleOrgChange = (value: string) => {
-    onFiltersChange({
-      ...filters,
-      org: value === 'all' ? undefined : (value as 'IBJJF' | 'JJWL'),
-    });
-  };
+export function TournamentFilters() {
+  const geo = useGeolocation();
+  const {
+    filters,
+    setDatePreset,
+    setDistancePreset,
+    setLocation,
+    clearLocation,
+    toggleFormat,
+    setOrg,
+    clearAll,
+  } = useFilterParams();
 
-  const handleFormatChange = (format: 'gi' | 'nogi' | 'kids') => {
-    onFiltersChange({
-      ...filters,
-      [format]: filters[format] ? undefined : true,
-    });
-  };
+  // Track if we've synced location to prevent infinite loops
+  const hasSyncedLocation = useRef(false);
 
-  const handleClear = () => {
-    if (searchRef.current) {
-      searchRef.current.value = '';
+  // Sync geolocation to URL params when it updates
+  useEffect(() => {
+    if (geo.lat && geo.lng && !hasSyncedLocation.current) {
+      if (geo.lat !== filters.lat || geo.lng !== filters.lng) {
+        setLocation(geo.lat, geo.lng);
+        hasSyncedLocation.current = true;
+      }
     }
-    onFiltersChange({});
+  }, [geo.lat, geo.lng, filters.lat, filters.lng, setLocation]);
+
+  const handleNearMe = () => {
+    hasSyncedLocation.current = false;
+    geo.requestLocation();
   };
 
-  // Check if any filters are active
+  const handleClearLocation = () => {
+    hasSyncedLocation.current = false;
+    geo.clearLocation();
+    clearLocation();
+  };
+
+  const hasLocation = filters.lat && filters.lng;
   const hasActiveFilters =
     filters.org ||
     filters.gi ||
     filters.nogi ||
     filters.kids ||
-    filters.search;
+    hasLocation ||
+    filters.datePreset !== '30';
 
   return (
     <div className="space-y-4 p-6 bg-[var(--glass-bg)] backdrop-blur-xl border border-[var(--glass-border)] rounded-2xl">
-      {/* Search form - stacks on mobile */}
-      <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
+      {/* Location Section */}
+      <div className="space-y-2">
+        <span className="text-sm text-white/50">Location</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleNearMe}
+            disabled={geo.loading}
+            className={
+              hasLocation
+                ? 'bg-[#00F0FF]/20 text-[#00F0FF] border-[#00F0FF]/30'
+                : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10'
+            }
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-          <Input
-            ref={searchRef}
-            placeholder="Search tournaments..."
-            defaultValue={filters.search || ''}
-            className="pl-10 bg-white/5 border-white/10 placeholder:text-white/40 text-white focus-visible:ring-white/20 focus-visible:border-white/30"
-          />
+            {geo.loading ? (
+              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+            ) : (
+              <MapPin className="h-4 w-4 mr-1.5" />
+            )}
+            {hasLocation ? geo.label || 'Near me' : 'Near me'}
+          </Button>
+          {hasLocation && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleClearLocation}
+              className="text-white/60 hover:text-white hover:bg-white/10"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+          {geo.error && (
+            <span className="text-xs text-red-400">{geo.error}</span>
+          )}
         </div>
-        <Button type="submit" className="w-full sm:w-auto bg-white/5 border border-white/10 text-white/80 hover:bg-white/10">
-          Search
-        </Button>
-      </form>
+      </div>
 
-      {/* Filter controls - responsive layout */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-        {/* Organization select */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-white/50 whitespace-nowrap">Org:</span>
-          <Select value={filters.org || 'all'} onValueChange={handleOrgChange}>
-            <SelectTrigger className="w-[120px] bg-white/5 border-white/10 text-white">
-              <SelectValue placeholder="Organization" />
-            </SelectTrigger>
-            <SelectContent className="bg-[#0A0A1A] border-white/10 text-white">
-              <SelectItem value="all">All Orgs</SelectItem>
-              <SelectItem value="IBJJF">IBJJF</SelectItem>
-              <SelectItem value="JJWL">JJWL</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      {/* Distance Section */}
+      <div className="space-y-2">
+        <span className="text-sm text-white/50">Distance</span>
+        <PresetButtonGroup
+          options={DISTANCE_OPTIONS}
+          selected={filters.distancePreset}
+          onChange={setDistancePreset}
+          disabled={!hasLocation}
+        />
+      </div>
 
-        {/* Divider for larger screens */}
-        <div className="hidden sm:block h-6 w-px bg-white/10" />
+      {/* Date Section */}
+      <div className="space-y-2">
+        <span className="text-sm text-white/50">Date</span>
+        <PresetButtonGroup
+          options={DATE_OPTIONS}
+          selected={filters.datePreset}
+          onChange={setDatePreset}
+        />
+      </div>
 
-        {/* Format toggle buttons */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-white/50 whitespace-nowrap">Format:</span>
+      {/* Format Section */}
+      <div className="space-y-2">
+        <span className="text-sm text-white/50">Format</span>
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex gap-1.5">
             <Button
+              type="button"
               variant="outline"
               size="sm"
-              onClick={() => handleFormatChange('gi')}
-              className={`min-w-[50px] ${
+              onClick={() => toggleFormat('gi')}
+              className={
                 filters.gi
                   ? 'bg-[#00F0FF]/20 text-[#00F0FF] border-[#00F0FF]/30 hover:bg-[#00F0FF]/30'
                   : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10'
-              }`}
+              }
             >
               GI
             </Button>
             <Button
+              type="button"
               variant="outline"
               size="sm"
-              onClick={() => handleFormatChange('nogi')}
-              className={`min-w-[60px] ${
+              onClick={() => toggleFormat('nogi')}
+              className={
                 filters.nogi
                   ? 'bg-[#00F0FF]/20 text-[#00F0FF] border-[#00F0FF]/30 hover:bg-[#00F0FF]/30'
                   : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10'
-              }`}
+              }
             >
               NOGI
             </Button>
             <Button
+              type="button"
               variant="outline"
               size="sm"
-              onClick={() => handleFormatChange('kids')}
-              className={`min-w-[50px] ${
+              onClick={() => toggleFormat('kids')}
+              className={
                 filters.kids
                   ? 'bg-[#00F0FF]/20 text-[#00F0FF] border-[#00F0FF]/30 hover:bg-[#00F0FF]/30'
                   : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10'
-              }`}
+              }
             >
               Kids
             </Button>
           </div>
-        </div>
 
-        {/* Clear button - show only when filters are active */}
-        {hasActiveFilters && (
-          <>
-            {/* Divider for larger screens */}
-            <div className="hidden sm:block h-6 w-px bg-white/10" />
+          <div className="h-6 w-px bg-white/10 hidden sm:block" />
 
+          <div className="flex gap-1.5">
             <Button
-              variant="ghost"
+              type="button"
+              variant="outline"
               size="sm"
-              onClick={handleClear}
-              className="text-white/60 hover:text-white hover:bg-white/10 self-start sm:self-center"
+              onClick={() => setOrg(filters.org === 'IBJJF' ? undefined : 'IBJJF')}
+              className={
+                filters.org === 'IBJJF'
+                  ? 'bg-[#00F0FF]/20 text-[#00F0FF] border-[#00F0FF]/30 hover:bg-[#00F0FF]/30'
+                  : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10'
+              }
             >
-              <svg
-                className="h-4 w-4 mr-1"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-              Clear
+              IBJJF
             </Button>
-          </>
-        )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setOrg(filters.org === 'JJWL' ? undefined : 'JJWL')}
+              className={
+                filters.org === 'JJWL'
+                  ? 'bg-[#00F0FF]/20 text-[#00F0FF] border-[#00F0FF]/30 hover:bg-[#00F0FF]/30'
+                  : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10'
+              }
+            >
+              JJWL
+            </Button>
+          </div>
+        </div>
       </div>
 
-      {/* Active filters summary for mobile */}
+      {/* Clear Filters */}
       {hasActiveFilters && (
-        <div className="sm:hidden text-xs text-white/50">
-          Active filters:{' '}
-          {[
-            filters.org,
-            filters.gi && 'GI',
-            filters.nogi && 'NOGI',
-            filters.kids && 'Kids',
-            filters.search && `"${filters.search}"`,
-          ]
-            .filter(Boolean)
-            .join(', ')}
+        <div className="pt-2 border-t border-white/10">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={clearAll}
+            className="text-white/60 hover:text-white hover:bg-white/10"
+          >
+            <X className="h-4 w-4 mr-1" />
+            Clear filters
+          </Button>
         </div>
       )}
     </div>

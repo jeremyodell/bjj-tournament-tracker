@@ -24,7 +24,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className={satoshi.variable} style={{ fontFamily: 'var(--font-satoshi)' }}>
+      <body className={satoshi.variable} style={{ fontFamily: 'var(--font-satoshi)' }} suppressHydrationWarning>
         <AnimatedBackground />
         <Providers>{children}</Providers>
       </body>

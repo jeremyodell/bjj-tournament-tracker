@@ -151,18 +151,31 @@ export function TournamentCard({ tournament, index }: TournamentCardProps) {
               </h3>
             </div>
 
-            {/* Time Label */}
-            {timeLabel && (
-              <div
-                className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid var(--glass-border)',
-                }}
-              >
-                {timeLabel}
-              </div>
-            )}
+            {/* Time Label and Distance */}
+            <div className="flex flex-wrap gap-2">
+              {timeLabel && (
+                <div
+                  className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid var(--glass-border)',
+                  }}
+                >
+                  {timeLabel}
+                </div>
+              )}
+              {tournament.distanceMiles !== undefined && (
+                <div
+                  className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid var(--glass-border)',
+                  }}
+                >
+                  {tournament.distanceMiles} mi away
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Bottom Section */}

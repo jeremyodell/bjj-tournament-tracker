@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { queryTournaments, getTournamentById } from '../db/queries.js';
+import { filterByDistance } from '../utils/distance.js';
 import { NotFoundError } from '../shared/errors.js';
 import type { TournamentItem } from '../db/types.js';
 import type { TournamentFilters } from '../db/queries.js';
@@ -14,11 +15,17 @@ const filtersSchema = z.object({
   kids: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
   search: z.string().min(1).optional(),
   limit: z.coerce.number().min(1).max(100).default(50),
+  // New location params
+  lat: z.coerce.number().min(-90).max(90).optional(),
+  lng: z.coerce.number().min(-180).max(180).optional(),
+  radiusMiles: z.coerce.number().min(1).max(1000).optional(),
 });
+
+type ParsedFilters = z.infer<typeof filtersSchema>;
 
 export function validateTournamentFilters(
   params: Record<string, string | undefined>
-): TournamentFilters & { limit: number } {
+): ParsedFilters {
   // Remove empty strings
   const cleaned = Object.fromEntries(
     Object.entries(params).filter(([_, v]) => v !== '' && v !== undefined)
@@ -41,9 +48,15 @@ export interface TournamentResponse {
   kids: boolean;
   registrationUrl: string | null;
   bannerUrl: string | null;
+  lat: number | null;
+  lng: number | null;
+  distanceMiles?: number;
 }
 
-export function formatTournamentResponse(item: TournamentItem): TournamentResponse {
+export function formatTournamentResponse(
+  item: TournamentItem,
+  distanceMiles?: number
+): TournamentResponse {
   return {
     id: item.PK,
     org: item.org,
@@ -59,6 +72,9 @@ export function formatTournamentResponse(item: TournamentItem): TournamentRespon
     kids: item.kids,
     registrationUrl: item.registrationUrl,
     bannerUrl: item.bannerUrl,
+    lat: item.lat,
+    lng: item.lng,
+    ...(distanceMiles !== undefined && { distanceMiles }),
   };
 }
 
@@ -78,19 +94,44 @@ export async function listTournaments(
   // Always filter to today or future - past tournaments are never returned
   filters.startAfter = getTodayDateString();
 
+  const { lat, lng, radiusMiles, ...dbFilters } = filters;
   const parsedLastKey = lastKey ? JSON.parse(Buffer.from(lastKey, 'base64').toString()) : undefined;
 
+  // For distance or org queries, we need to fetch more and filter client-side
+  // because DynamoDB applies filters AFTER reading items up to the limit
+  const hasPostQueryFilters = lat && lng && radiusMiles || dbFilters.org || dbFilters.gi !== undefined || dbFilters.nogi !== undefined || dbFilters.kids !== undefined;
+  const fetchLimit = hasPostQueryFilters ? 500 : filters.limit;
+
   const { items, lastKey: newLastKey } = await queryTournaments(
-    filters,
-    filters.limit,
+    dbFilters as TournamentFilters,
+    fetchLimit,
     parsedLastKey
   );
 
+  let tournaments: TournamentResponse[];
+
+  if (lat !== undefined && lng !== undefined && radiusMiles !== undefined) {
+    // Apply distance filtering
+    const withDistance = filterByDistance(items, lat, lng, radiusMiles);
+    tournaments = withDistance.map((item) =>
+      formatTournamentResponse(item, item.distanceMiles)
+    );
+  } else {
+    tournaments = items.map((item) => formatTournamentResponse(item));
+  }
+
+  // Limit after all filtering when we fetched extra items
+  if (hasPostQueryFilters) {
+    tournaments = tournaments.slice(0, filters.limit);
+  }
+
   return {
-    tournaments: items.map(formatTournamentResponse),
-    nextCursor: newLastKey
-      ? Buffer.from(JSON.stringify(newLastKey)).toString('base64')
-      : undefined,
+    tournaments,
+    // Don't return cursor when using post-query filters (we fetch all and filter)
+    nextCursor:
+      !hasPostQueryFilters && newLastKey
+        ? Buffer.from(JSON.stringify(newLastKey)).toString('base64')
+        : undefined,
   };
 }
 

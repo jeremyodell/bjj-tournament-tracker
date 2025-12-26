@@ -8,6 +8,16 @@ import type { NormalizedTournament } from '../../fetchers/types.js';
 jest.mock('../../fetchers/ibjjfFetcher.js');
 jest.mock('../../fetchers/jjwlFetcher.js');
 
+// Mock enrichment to pass through
+jest.mock('../../services/venueEnrichment.js', () => ({
+  enrichTournamentsWithGeocode: jest.fn((tournaments: NormalizedTournament[]) =>
+    Promise.resolve({
+      tournaments: tournaments.map((t) => ({ ...t, lat: null, lng: null })),
+      stats: { cached: 0, geocoded: 0, failed: 0, lowConfidence: 0 },
+    })
+  ),
+}));
+
 const mockTournament: NormalizedTournament = {
   org: 'IBJJF',
   externalId: '123',

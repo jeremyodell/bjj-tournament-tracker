@@ -14,17 +14,22 @@ export interface Tournament {
   kids: boolean;
   registrationUrl: string | null;
   bannerUrl: string | null;
+  lat: number | null;
+  lng: number | null;
+  distanceMiles?: number;
 }
 
 export interface TournamentFilters {
   org?: 'IBJJF' | 'JJWL';
   startAfter?: string;
   startBefore?: string;
-  city?: string;
   gi?: boolean;
   nogi?: boolean;
   kids?: boolean;
-  search?: string;
+  // Location-based filtering
+  lat?: number;
+  lng?: number;
+  radiusMiles?: number;
 }
 
 export interface PaginatedResponse<T> {

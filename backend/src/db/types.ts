@@ -11,6 +11,12 @@ export const buildAthleteSK = (athleteId: string): string =>
 export const buildWishlistSK = (tournamentPK: string): string =>
   `WISH#${tournamentPK}`;
 
+export const buildVenuePK = (venueId: string): string =>
+  `VENUE#${venueId}`;
+
+export const buildVenueLookupSK = (venue: string, city: string): string =>
+  `${venue.toLowerCase().trim()}#${city.toLowerCase().trim()}`;
+
 // Entity types
 export interface TournamentItem {
   PK: string; // TOURN#<org>#<externalId>
@@ -30,6 +36,11 @@ export interface TournamentItem {
   kids: boolean;
   registrationUrl: string | null;
   bannerUrl: string | null;
+  // Geocoding fields
+  lat: number | null;
+  lng: number | null;
+  venueId: string | null;
+  geocodeConfidence: 'high' | 'low' | 'failed' | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -69,8 +80,26 @@ export interface WishlistItem {
   updatedAt: string;
 }
 
+export interface VenueItem {
+  PK: string; // VENUE#<ulid>
+  SK: 'META';
+  GSI1PK: 'VENUE_LOOKUP';
+  GSI1SK: string; // <normalizedVenue>#<normalizedCity>
+  venueId: string;
+  name: string;
+  city: string;
+  country: string | null;
+  lat: number;
+  lng: number;
+  geocodeConfidence: 'high' | 'low';
+  manualOverride: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type DynamoDBItem =
   | TournamentItem
   | UserProfileItem
   | AthleteItem
-  | WishlistItem;
+  | WishlistItem
+  | VenueItem;

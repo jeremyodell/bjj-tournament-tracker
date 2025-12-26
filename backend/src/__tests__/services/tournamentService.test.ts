@@ -52,6 +52,10 @@ describe('formatTournamentResponse', () => {
     kids: false,
     registrationUrl: 'https://ibjjf.com/pan',
     bannerUrl: null,
+    lat: 33.6845,
+    lng: -117.8265,
+    venueId: 'venue-123',
+    geocodeConfidence: 'high',
     createdAt: '2025-01-01T00:00:00Z',
     updatedAt: '2025-01-01T00:00:00Z',
   };
