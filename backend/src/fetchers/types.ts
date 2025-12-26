@@ -45,4 +45,9 @@ export interface NormalizedTournament {
   kids: boolean;
   registrationUrl: string | null;
   bannerUrl: string | null;
+  // Optional geocoding fields (added during sync enrichment)
+  lat?: number | null;
+  lng?: number | null;
+  venueId?: string | null;
+  geocodeConfidence?: 'high' | 'low' | 'failed' | null;
 }
