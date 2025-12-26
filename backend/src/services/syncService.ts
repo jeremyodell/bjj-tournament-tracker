@@ -1,22 +1,31 @@
 import { fetchIBJJFTournaments } from '../fetchers/ibjjfFetcher.js';
 import { fetchJJWLTournaments } from '../fetchers/jjwlFetcher.js';
 import { upsertTournaments } from '../db/queries.js';
+import { enrichTournamentsWithGeocode, type EnrichmentStats } from './venueEnrichment.js';
 import type { NormalizedTournament } from '../fetchers/types.js';
 
+export interface SourceResult {
+  fetched: number;
+  saved: number;
+  error?: string;
+  enrichment?: EnrichmentStats;
+}
+
 export interface SyncResult {
-  ibjjf: { fetched: number; saved: number; error?: string };
-  jjwl: { fetched: number; saved: number; error?: string };
+  ibjjf: SourceResult;
+  jjwl: SourceResult;
 }
 
 export interface SyncOptions {
   dryRun?: boolean;
+  skipEnrichment?: boolean;
 }
 
 async function fetchSource(
   name: string,
   fetcher: () => Promise<NormalizedTournament[]>,
   options: SyncOptions
-): Promise<{ fetched: number; saved: number; error?: string }> {
+): Promise<SourceResult> {
   try {
     const tournaments = await fetcher();
     const fetched = tournaments.length;
@@ -25,8 +34,20 @@ async function fetchSource(
       return { fetched, saved: 0 };
     }
 
-    const saved = await upsertTournaments(tournaments);
-    return { fetched, saved };
+    // Enrich with geocoding unless skipped
+    let enrichedTournaments = tournaments;
+    let enrichmentStats: EnrichmentStats | undefined;
+
+    if (!options.skipEnrichment) {
+      const enrichResult = await enrichTournamentsWithGeocode(tournaments);
+      enrichedTournaments = enrichResult.tournaments;
+      enrichmentStats = enrichResult.stats;
+
+      console.log(`${name} enrichment:`, enrichmentStats);
+    }
+
+    const saved = await upsertTournaments(enrichedTournaments);
+    return { fetched, saved, enrichment: enrichmentStats };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error(`Failed to sync ${name}:`, message);
