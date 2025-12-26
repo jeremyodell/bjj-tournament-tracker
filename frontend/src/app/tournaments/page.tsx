@@ -1,17 +1,11 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { Suspense } from 'react';
 import { TournamentList } from '@/components/tournaments/TournamentList';
 import { TournamentFilters } from '@/components/tournaments/TournamentFilters';
-import type { TournamentFilters as Filters } from '@/lib/types';
+import { TournamentGridSkeleton } from '@/components/tournaments/TournamentCardSkeleton';
 
 export default function TournamentsPage() {
-  const [filters, setFilters] = useState<Filters>({});
-
-  const handleClearFilters = useCallback(() => {
-    setFilters({});
-  }, []);
-
   return (
     <div className="relative min-h-screen">
       <div className="relative z-10">
@@ -28,8 +22,12 @@ export default function TournamentsPage() {
 
           {/* Main content */}
           <div className="space-y-6">
-            <TournamentFilters filters={filters} onFiltersChange={setFilters} />
-            <TournamentList filters={filters} onClearFilters={handleClearFilters} />
+            <Suspense fallback={null}>
+              <TournamentFilters />
+            </Suspense>
+            <Suspense fallback={<TournamentGridSkeleton count={6} />}>
+              <TournamentList />
+            </Suspense>
           </div>
         </div>
       </div>

@@ -2,17 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTournaments } from '@/hooks/useTournaments';
+import { useFilterParams } from '@/hooks/useFilterParams';
 import { TournamentCard } from './TournamentCard';
 import { TournamentGridSkeleton } from './TournamentCardSkeleton';
 import { ErrorState, EmptyState } from './ErrorState';
-import type { TournamentFilters } from '@/lib/types';
 
-interface TournamentListProps {
-  filters?: TournamentFilters;
-  onClearFilters?: () => void;
-}
+export function TournamentList() {
+  const { filters, clearAll } = useFilterParams();
 
-export function TournamentList({ filters = {}, onClearFilters }: TournamentListProps) {
   const {
     data,
     isLoading,
@@ -77,9 +74,14 @@ export function TournamentList({ filters = {}, onClearFilters }: TournamentListP
 
   // Empty state
   if (tournaments.length === 0) {
-    const hasActiveFilters = Object.values(filters).some(
-      (v) => v !== undefined && v !== ''
-    );
+    const hasActiveFilters =
+      filters.org ||
+      filters.gi ||
+      filters.nogi ||
+      filters.kids ||
+      filters.lat ||
+      filters.radiusMiles ||
+      filters.datePreset !== '30';
 
     return (
       <EmptyState
@@ -90,8 +92,8 @@ export function TournamentList({ filters = {}, onClearFilters }: TournamentListP
             : 'No tournaments are currently available. Check back later for upcoming events.'
         }
         action={
-          hasActiveFilters && onClearFilters
-            ? { label: 'Clear Filters', onClick: onClearFilters }
+          hasActiveFilters
+            ? { label: 'Clear Filters', onClick: clearAll }
             : undefined
         }
       />
@@ -100,9 +102,10 @@ export function TournamentList({ filters = {}, onClearFilters }: TournamentListP
 
   return (
     <div className="space-y-6">
-      {/* Tournament count */}
+      {/* Tournament count with distance hint */}
       <div className="text-sm text-muted-foreground">
         Showing {tournaments.length} tournament{tournaments.length !== 1 ? 's' : ''}
+        {filters.radiusMiles && ` within ${filters.radiusMiles} miles`}
       </div>
 
       {/* Responsive grid: 1 col on mobile, 2 on tablet, 3 on desktop */}
