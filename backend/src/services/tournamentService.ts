@@ -89,8 +89,10 @@ export async function listTournaments(
   const { lat, lng, radiusMiles, ...dbFilters } = filters;
   const parsedLastKey = lastKey ? JSON.parse(Buffer.from(lastKey, 'base64').toString()) : undefined;
 
-  // For distance queries, we need to fetch more and filter client-side
-  const fetchLimit = lat && lng && radiusMiles ? 500 : filters.limit;
+  // For distance or org queries, we need to fetch more and filter client-side
+  // because DynamoDB applies filters AFTER reading items up to the limit
+  const hasPostQueryFilters = lat && lng && radiusMiles || dbFilters.org || dbFilters.gi !== undefined || dbFilters.nogi !== undefined || dbFilters.kids !== undefined;
+  const fetchLimit = hasPostQueryFilters ? 500 : filters.limit;
 
   const { items, lastKey: newLastKey } = await queryTournaments(
     dbFilters as TournamentFilters,
@@ -106,17 +108,20 @@ export async function listTournaments(
     tournaments = withDistance.map((item) =>
       formatTournamentResponse(item, item.distanceMiles)
     );
-    // Limit after distance filtering
-    tournaments = tournaments.slice(0, filters.limit);
   } else {
     tournaments = items.map((item) => formatTournamentResponse(item));
   }
 
+  // Limit after all filtering when we fetched extra items
+  if (hasPostQueryFilters) {
+    tournaments = tournaments.slice(0, filters.limit);
+  }
+
   return {
     tournaments,
-    // Don't return cursor for distance queries (we fetch all and filter)
+    // Don't return cursor when using post-query filters (we fetch all and filter)
     nextCursor:
-      lat === undefined && newLastKey
+      !hasPostQueryFilters && newLastKey
         ? Buffer.from(JSON.stringify(newLastKey)).toString('base64')
         : undefined,
   };

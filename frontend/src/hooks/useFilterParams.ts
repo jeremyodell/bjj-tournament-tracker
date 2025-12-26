@@ -32,7 +32,9 @@ function getDateRange(preset: DatePreset): { startAfter: string; startBefore: st
       endDate = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
       break;
     case 'year':
-      endDate = new Date(now.getFullYear(), 11, 31);
+      // In December, show next year since people are planning ahead
+      const targetYear = now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear();
+      endDate = new Date(targetYear, 11, 31);
       break;
   }
 

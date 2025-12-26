@@ -7,12 +7,20 @@ import { PresetButtonGroup } from '@/components/ui/preset-button';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useFilterParams } from '@/hooks/useFilterParams';
 
+// In December, show next year since people are planning ahead
+const getYearLabel = () => {
+  const now = new Date();
+  const month = now.getMonth(); // 0-indexed, so December is 11
+  const year = month === 11 ? now.getFullYear() + 1 : now.getFullYear();
+  return String(year);
+};
+
 const DATE_OPTIONS = [
   { value: 'month' as const, label: 'This Month' },
   { value: '30' as const, label: '30 Days' },
   { value: '60' as const, label: '60 Days' },
   { value: '90' as const, label: '90 Days' },
-  { value: 'year' as const, label: 'This Year' },
+  { value: 'year' as const, label: getYearLabel() },
 ];
 
 const DISTANCE_OPTIONS = [
