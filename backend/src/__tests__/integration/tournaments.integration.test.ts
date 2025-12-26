@@ -154,7 +154,7 @@ describe('Tournament Handler Integration Tests', () => {
       }>(result!);
 
       expect(body.tournaments).toHaveLength(1);
-      expect(body.tournaments[0].name).toBe('World Championship 2025');
+      expect(body.tournaments[0].name).toBe('World Championship 2026');
     });
 
     it('searches by tournament name', async () => {
@@ -293,7 +293,7 @@ describe('Tournament Handler Integration Tests', () => {
       }>(result!);
 
       expect(body.id).toBe('TOURN#IBJJF#1001');
-      expect(body.name).toBe('Pan American Championship 2025');
+      expect(body.name).toBe('Pan American Championship 2026');
       expect(body.org).toBe('IBJJF');
       expect(body.city).toBe('Irvine');
     });
