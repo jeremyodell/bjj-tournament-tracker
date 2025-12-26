@@ -62,6 +62,10 @@ export function formatTournamentResponse(item: TournamentItem): TournamentRespon
   };
 }
 
+function getTodayDateString(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
 export async function listTournaments(
   params: Record<string, string | undefined>,
   lastKey?: string
@@ -70,6 +74,10 @@ export async function listTournaments(
   nextCursor?: string;
 }> {
   const filters = validateTournamentFilters(params);
+
+  // Always filter to today or future - past tournaments are never returned
+  filters.startAfter = getTodayDateString();
+
   const parsedLastKey = lastKey ? JSON.parse(Buffer.from(lastKey, 'base64').toString()) : undefined;
 
   const { items, lastKey: newLastKey } = await queryTournaments(
