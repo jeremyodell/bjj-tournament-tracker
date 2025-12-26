@@ -110,6 +110,8 @@ export function mockTournamentResponse(
     kids: false,
     registrationUrl: 'https://ibjjf.com/events/pan-2025',
     bannerUrl: null,
+    lat: null,
+    lng: null,
     ...overrides,
   };
 }
@@ -139,6 +141,10 @@ export function mockTournamentItem(
     kids: false,
     registrationUrl: 'https://ibjjf.com/events/pan-2025',
     bannerUrl: null,
+    lat: null,
+    lng: null,
+    venueId: null,
+    geocodeConfidence: null,
     createdAt: now,
     updatedAt: now,
     ...overrides,
