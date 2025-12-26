@@ -1,7 +1,7 @@
-import { QueryCommand, BatchWriteCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { QueryCommand, BatchWriteCommand, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { docClient, TABLE_NAME, GSI1_NAME } from './client.js';
-import { buildTournamentPK } from './types.js';
-import type { TournamentItem } from './types.js';
+import { buildTournamentPK, buildVenuePK, buildVenueLookupSK } from './types.js';
+import type { TournamentItem, VenueItem } from './types.js';
 import type { NormalizedTournament } from '../fetchers/types.js';
 
 export interface TournamentFilters {
@@ -168,6 +168,11 @@ export async function upsertTournaments(
               GSI1PK: 'TOURNAMENTS',
               GSI1SK: `${t.startDate}#${t.org}#${t.externalId}`,
               ...t,
+              // Ensure geocoding fields have defaults
+              lat: t.lat ?? null,
+              lng: t.lng ?? null,
+              venueId: t.venueId ?? null,
+              geocodeConfidence: t.geocodeConfidence ?? null,
               createdAt: now,
               updatedAt: now,
             } satisfies TournamentItem,
@@ -181,4 +186,70 @@ export async function upsertTournaments(
   }
 
   return saved;
+}
+
+/**
+ * Look up a venue by name and city (normalized, case-insensitive)
+ */
+export async function getVenueByLookup(
+  venue: string,
+  city: string
+): Promise<VenueItem | null> {
+  const lookupKey = buildVenueLookupSK(venue, city);
+
+  const command = new QueryCommand({
+    TableName: TABLE_NAME,
+    IndexName: GSI1_NAME,
+    KeyConditionExpression: 'GSI1PK = :pk AND GSI1SK = :sk',
+    ExpressionAttributeValues: {
+      ':pk': 'VENUE_LOOKUP',
+      ':sk': lookupKey,
+    },
+    Limit: 1,
+  });
+
+  const result = await docClient.send(command);
+  return (result.Items?.[0] as VenueItem) || null;
+}
+
+/**
+ * Create or update a venue in the cache
+ */
+export async function upsertVenue(venue: Omit<VenueItem, 'PK' | 'SK' | 'GSI1PK' | 'GSI1SK'>): Promise<void> {
+  const now = new Date().toISOString();
+  const lookupKey = buildVenueLookupSK(venue.name, venue.city);
+
+  const command = new PutCommand({
+    TableName: TABLE_NAME,
+    Item: {
+      PK: buildVenuePK(venue.venueId),
+      SK: 'META',
+      GSI1PK: 'VENUE_LOOKUP',
+      GSI1SK: lookupKey,
+      ...venue,
+      updatedAt: now,
+    } satisfies VenueItem,
+  });
+
+  await docClient.send(command);
+}
+
+/**
+ * Get all venues with low confidence that haven't been manually overridden
+ */
+export async function getLowConfidenceVenues(): Promise<VenueItem[]> {
+  const command = new QueryCommand({
+    TableName: TABLE_NAME,
+    IndexName: GSI1_NAME,
+    KeyConditionExpression: 'GSI1PK = :pk',
+    FilterExpression: 'geocodeConfidence = :conf AND manualOverride = :override',
+    ExpressionAttributeValues: {
+      ':pk': 'VENUE_LOOKUP',
+      ':conf': 'low',
+      ':override': false,
+    },
+  });
+
+  const result = await docClient.send(command);
+  return (result.Items || []) as VenueItem[];
 }
