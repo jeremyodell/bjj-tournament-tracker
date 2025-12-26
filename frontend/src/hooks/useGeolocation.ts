@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 interface GeolocationState {
   lat: number | null;
@@ -38,15 +38,27 @@ function clearStorage(): void {
 }
 
 export function useGeolocation(): UseGeolocationReturn {
-  const stored = loadFromStorage();
-
+  // Start with null to match server render, load from storage in useEffect
   const [state, setState] = useState<GeolocationState>({
-    lat: stored?.lat ?? null,
-    lng: stored?.lng ?? null,
-    label: stored?.label ?? null,
+    lat: null,
+    lng: null,
+    label: null,
     loading: false,
     error: null,
   });
+
+  // Load from localStorage after mount to avoid hydration mismatch
+  useEffect(() => {
+    const stored = loadFromStorage();
+    if (stored) {
+      setState((prev) => ({
+        ...prev,
+        lat: stored.lat,
+        lng: stored.lng,
+        label: stored.label,
+      }));
+    }
+  }, []);
 
   const requestLocation = useCallback(() => {
     if (!navigator.geolocation) {
