@@ -36,6 +36,11 @@ export interface TournamentItem {
   kids: boolean;
   registrationUrl: string | null;
   bannerUrl: string | null;
+  // Geocoding fields
+  lat: number | null;
+  lng: number | null;
+  venueId: string | null;
+  geocodeConfidence: 'high' | 'low' | 'failed' | null;
   createdAt: string;
   updatedAt: string;
 }
