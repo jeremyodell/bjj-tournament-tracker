@@ -1,6 +1,16 @@
 import { Amplify } from 'aws-amplify';
 import { signIn, signUp, signOut, getCurrentUser, fetchAuthSession, confirmSignUp, resendSignUpCode } from '@aws-amplify/auth';
 
+// Helper to add timeout to async operations
+function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> {
+  const timeout = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error(errorMessage)), ms);
+  });
+  return Promise.race([promise, timeout]);
+}
+
+const AUTH_TIMEOUT = 10000; // 10 seconds
+
 // Dev mode - bypasses Cognito for local testing
 const IS_DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === 'true';
 
@@ -11,27 +21,28 @@ const DEV_USER_KEY = 'dev-auth-user';
 const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
 const userPoolClientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
 
-// Debug: Log config status (remove in production)
+// Only configure on client side
 if (typeof window !== 'undefined') {
+  // Debug: Log config status
   console.log('[Auth Config]', {
     IS_DEV_MODE,
     hasUserPoolId: !!userPoolId,
     hasClientId: !!userPoolClientId,
     userPoolId: userPoolId ? userPoolId.substring(0, 10) + '...' : 'NOT SET',
   });
-}
 
-if (!IS_DEV_MODE && userPoolId && userPoolClientId) {
-  Amplify.configure({
-    Auth: {
-      Cognito: {
-        userPoolId,
-        userPoolClientId,
+  if (!IS_DEV_MODE && userPoolId && userPoolClientId) {
+    Amplify.configure({
+      Auth: {
+        Cognito: {
+          userPoolId,
+          userPoolClientId,
+        }
       }
-    }
-  });
-} else if (!IS_DEV_MODE) {
-  console.error('[Auth] Cognito not configured - missing environment variables');
+    });
+  } else if (!IS_DEV_MODE) {
+    console.error('[Auth] Cognito not configured - missing environment variables');
+  }
 }
 
 export interface AuthUser {
@@ -65,9 +76,13 @@ export async function login(email: string, password: string): Promise<AuthUser> 
     return user;
   }
 
+  console.log('[Auth] login: starting sign in...');
   const result = await signIn({ username: email, password });
+  console.log('[Auth] login: sign in result:', { isSignedIn: result.isSignedIn, nextStep: result.nextStep });
   if (result.isSignedIn) {
+    console.log('[Auth] login: getting current user...');
     const user = await getCurrentUser();
+    console.log('[Auth] login: user retrieved:', user.userId);
     return { userId: user.userId, email };
   }
   throw new Error('Sign in failed');
@@ -128,12 +143,27 @@ export async function getSession(): Promise<{ accessToken: string; userId: strin
   }
 
   try {
-    const session = await fetchAuthSession();
-    const user = await getCurrentUser();
+    console.log('[Auth] getSession: fetching auth session...');
+    const session = await withTimeout(
+      fetchAuthSession(),
+      AUTH_TIMEOUT,
+      'fetchAuthSession timed out'
+    );
+    console.log('[Auth] getSession: session fetched, getting user...');
+    const user = await withTimeout(
+      getCurrentUser(),
+      AUTH_TIMEOUT,
+      'getCurrentUser timed out'
+    );
+    console.log('[Auth] getSession: user fetched');
     const accessToken = session.tokens?.accessToken?.toString();
-    if (!accessToken) return null;
+    if (!accessToken) {
+      console.log('[Auth] getSession: no access token in session');
+      return null;
+    }
     return { accessToken, userId: user.userId };
-  } catch {
+  } catch (error) {
+    console.error('[Auth] getSession error:', error);
     return null;
   }
 }
@@ -144,11 +174,23 @@ export async function getAuthenticatedUser(): Promise<AuthUser | null> {
   }
 
   try {
-    const user = await getCurrentUser();
-    const session = await fetchAuthSession();
+    console.log('[Auth] getAuthenticatedUser: getting current user...');
+    const user = await withTimeout(
+      getCurrentUser(),
+      AUTH_TIMEOUT,
+      'getCurrentUser timed out'
+    );
+    console.log('[Auth] getAuthenticatedUser: user found, fetching session...');
+    const session = await withTimeout(
+      fetchAuthSession(),
+      AUTH_TIMEOUT,
+      'fetchAuthSession timed out'
+    );
+    console.log('[Auth] getAuthenticatedUser: session fetched');
     const email = session.tokens?.idToken?.payload?.email as string;
     return { userId: user.userId, email };
-  } catch {
+  } catch (error) {
+    console.error('[Auth] getAuthenticatedUser error:', error);
     return null;
   }
 }
