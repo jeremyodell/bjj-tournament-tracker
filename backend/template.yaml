@@ -32,10 +32,6 @@ Parameters:
       - 'false'
     Description: Enable daily scheduled tournament sync
 
-  CognitoUserPoolArn:
-    Type: String
-    Description: Cognito User Pool ARN for API Gateway authorizer
-
 Resources:
   # ============================================
   # DynamoDB Table
@@ -156,7 +152,7 @@ Resources:
       Auth:
         Authorizers:
           CognitoAuthorizer:
-            UserPoolArn: !Ref CognitoUserPoolArn
+            UserPoolArn: !GetAtt UserPool.Arn
             Identity:
               Header: Authorization
 
