@@ -103,29 +103,97 @@ Central location for planned work across the BJJ Tournament Tracker project.
 
 ---
 
-## Authentication (Phase 2)
+## Authentication
 
-*Source: [Design Doc](./plans/2025-12-24-bjj-tournament-tracker-design.md)*
+*Source: [Design Doc](./plans/2025-12-24-bjj-tournament-tracker-design.md), [Paid Features Plan](./plans/2025-12-27-paid-features-implementation.md)*
 
-### Deferred
+### Completed (2025-12-27)
 
-- [ ] **Cognito User Pool** - Set up authentication
-- [ ] **Login/Register UI** - Frontend auth flows
-- [ ] **Protected routes** - Require auth for wishlist features
-- [ ] **User profile** - Basic profile management
+- [x] **Cognito SDK integration** - Added @aws-amplify/auth to frontend
+- [x] **Auth store** - Zustand store with persist middleware for auth state
+- [x] **Login/Register UI** - Login, register, and email confirmation pages
+- [x] **Protected routes** - Auth guard layout for /wishlist, /profile, /planner
+- [x] **Dev mode** - Local testing without Cognito (NEXT_PUBLIC_DEV_MODE=true)
+
+### Pending
+
+- [ ] **Cognito User Pool setup** - Create User Pool in AWS Console or via CloudFormation
+- [ ] **Password reset flow** - Forgot password UI and Cognito integration
+- [ ] **Social login** - Google/Apple sign-in options
 
 ---
 
-## Wishlist Feature (Phase 2)
+## Wishlist Feature
 
-*Source: [Design Doc](./plans/2025-12-24-bjj-tournament-tracker-design.md)*
+*Source: [Design Doc](./plans/2025-12-24-bjj-tournament-tracker-design.md), [Paid Features Plan](./plans/2025-12-27-paid-features-implementation.md)*
 
-### Deferred
+### Completed (2025-12-27)
 
-- [ ] **Wishlist data model** - DynamoDB schema for user wishlists
-- [ ] **Wishlist API** - CRUD endpoints for wishlist entries
-- [ ] **Wishlist UI** - Add/remove tournaments, view wishlist
-- [ ] **Athlete tracking** - Track multiple athletes per wishlist entry
+- [x] **Wishlist data model** - DynamoDB schema using USER#userId PK, WISH#tournamentPK SK
+- [x] **Wishlist API** - Lambda handler for GET/POST/PUT/DELETE /wishlist
+- [x] **Wishlist UI** - Heart icon on tournament cards, dedicated wishlist page
+- [x] **Athlete tracking** - Athletes can be associated with wishlist items
+
+---
+
+## Athlete Management
+
+*Source: [Paid Features Plan](./plans/2025-12-27-paid-features-implementation.md)*
+
+### Completed (2025-12-27)
+
+- [x] **Athletes data model** - DynamoDB schema using USER#userId PK, ATHLETE#athleteId SK
+- [x] **Athletes API** - Lambda handler for GET/POST/PUT/DELETE /athletes
+- [x] **Profile page** - View/add/edit/delete athletes with belt color display
+
+---
+
+## Season Planner (Paid Feature)
+
+*Source: [Paid Features Plan](./plans/2025-12-27-paid-features-implementation.md)*
+
+### Completed (2025-12-27)
+
+- [x] **Planner store** - Zustand store for config, plan, must-go tournaments
+- [x] **Planner UI** - Split-screen layout with config panel and results
+- [x] **Plan generator** - Client-side algorithm with Haversine distance, cost estimation
+- [x] **Upgrade modal** - Paywall UI with pricing options
+- [x] **Paywall check** - Shows upgrade modal for non-Pro users
+
+### High Priority - Security
+
+- [ ] **Backend subscription verification** - ⚠️ SECURITY: Current paywall is client-side only and can be bypassed via localStorage. For production, must implement:
+  1. Store subscription status in DynamoDB (linked to Cognito user ID)
+  2. Create `/api/subscription/status` endpoint to verify subscription
+  3. Move plan generation to backend Lambda that checks subscription
+  4. Integrate Stripe webhooks to update subscription status on payment events
+
+### Medium Priority
+
+- [ ] **Stripe integration** - Payment processing for Pro subscriptions
+- [ ] **"Add from wishlist" button** - Currently a stub, needs to open wishlist selector modal
+- [ ] **Swap tournament feature** - Show alternative tournaments at similar cost
+
+---
+
+## Environment Management
+
+*Source: Feature branch work (2025-12-27)*
+
+### High Priority
+
+- [ ] **Environment configuration strategy** - Investigate and document approach for managing:
+  - Development (local with Docker, dev mode auth)
+  - Staging (AWS with test Cognito pool, test Stripe)
+  - Production (AWS with production Cognito, production Stripe)
+
+- [ ] **Environment variables documentation** - Document all required env vars:
+  - Frontend: NEXT_PUBLIC_COGNITO_USER_POOL_ID, NEXT_PUBLIC_COGNITO_CLIENT_ID, NEXT_PUBLIC_DEV_MODE, NEXT_PUBLIC_API_URL
+  - Backend: DYNAMODB_TABLE, COGNITO_USER_POOL_ARN
+
+- [ ] **SAM parameter management** - Strategy for different SAM configs per environment (samconfig.toml profiles or separate files)
+
+- [ ] **Secrets management** - Decide on approach: AWS Secrets Manager, SSM Parameter Store, or environment-specific .env files
 
 ---
 
