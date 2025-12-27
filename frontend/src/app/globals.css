@@ -258,4 +258,49 @@
   .animate-fade-in-up {
     animation: fade-in-up 0.5s ease-out;
   }
+
+  /* Belt Weave Background keyframes */
+  @keyframes weave-right {
+    0% {
+      transform: translateX(-30%) rotate(25deg);
+    }
+    100% {
+      transform: translateX(30%) rotate(25deg);
+    }
+  }
+
+  @keyframes weave-left {
+    0% {
+      transform: translateX(30%) rotate(-22deg);
+    }
+    100% {
+      transform: translateX(-30%) rotate(-22deg);
+    }
+  }
+
+  @keyframes weave-pulse {
+    0%, 100% {
+      opacity: 0.04;
+      transform: scaleX(1);
+    }
+    50% {
+      opacity: 0.06;
+      transform: scaleX(1.02);
+    }
+  }
+
+  @keyframes glow-drift {
+    0%, 100% {
+      transform: translate(0, 0);
+      opacity: 0.03;
+    }
+    33% {
+      transform: translate(30px, -20px);
+      opacity: 0.04;
+    }
+    66% {
+      transform: translate(-20px, 30px);
+      opacity: 0.025;
+    }
+  }
 }
