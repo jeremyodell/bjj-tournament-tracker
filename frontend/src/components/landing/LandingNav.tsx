@@ -42,11 +42,11 @@ export function LandingNav() {
           </span>
         </Link>
 
-        {/* Browse Tournaments Button */}
+        {/* Browse Tournaments Button - min-h-[44px] for touch target */}
         <Button
           asChild
           variant="outline"
-          className="border-[#d4af37]/50 text-[#d4af37] hover:bg-[#d4af37]/10 hover:border-[#d4af37] hover:text-[#d4af37] transition-all duration-300"
+          className="min-h-[44px] border-[#d4af37]/50 text-[#d4af37] hover:bg-[#d4af37]/10 hover:border-[#d4af37] hover:text-[#d4af37] transition-all duration-300"
         >
           <Link href="/tournaments">Browse Tournaments</Link>
         </Button>

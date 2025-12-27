@@ -18,9 +18,9 @@ export function Footer() {
       role="contentinfo"
     >
       <div className="max-w-7xl mx-auto px-6 py-6">
-        <div className="flex items-center justify-center gap-6 text-sm text-white/40">
+        <div className="flex flex-col items-center justify-center gap-4 text-sm text-white/40 sm:flex-row sm:gap-6">
           {/* Small Logo */}
-          <Link href="/" className="flex-shrink-0">
+          <Link href="/" className="flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center">
             <Image
               src="/logo.png"
               alt="BJJComps logo"
@@ -30,19 +30,19 @@ export function Footer() {
             />
           </Link>
 
-          {/* Separator */}
-          <span className="text-white/20">|</span>
+          {/* Separator - hidden on mobile */}
+          <span className="hidden text-white/20 sm:inline">|</span>
 
           {/* Copyright */}
           <span>&copy; 2025 BJJComps</span>
 
-          {/* Separator */}
-          <span className="text-white/20">|</span>
+          {/* Separator - hidden on mobile */}
+          <span className="hidden text-white/20 sm:inline">|</span>
 
-          {/* Contact Link */}
+          {/* Contact Link - with adequate touch target */}
           <a
             href="mailto:contact@bjjcomps.com"
-            className="hover:text-white/70 transition-colors duration-300"
+            className="min-h-[44px] flex items-center justify-center hover:text-white/70 transition-colors duration-300"
           >
             Contact
           </a>

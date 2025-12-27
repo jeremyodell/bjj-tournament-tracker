@@ -126,10 +126,10 @@ export function LandingHero() {
           </div>
 
           {/* Right Content - Angled Screenshot */}
-          <div className="relative flex items-center justify-center pb-12 lg:pb-0 lg:pl-4">
-            {/* Screenshot container with dramatic angle */}
+          <div className="relative flex items-center justify-center pb-12 lg:pb-0 lg:pl-4 overflow-visible">
+            {/* Screenshot container with dramatic angle - bleeds off-screen on mobile */}
             <div
-              className="relative w-full max-w-[600px] lg:max-w-none animate-hero-screenshot"
+              className="relative w-full max-w-[600px] lg:max-w-none animate-hero-screenshot translate-x-[15%] sm:translate-x-[10%] lg:translate-x-0"
               style={{
                 animationDelay: '0.55s',
                 animationFillMode: 'both',
