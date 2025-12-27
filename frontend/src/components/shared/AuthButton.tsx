@@ -1,15 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 
 export function AuthButton() {
-  const { user, isAuthenticated, isLoading, logout, checkAuth } = useAuthStore();
+  const { user, isAuthenticated, isLoading, logout } = useAuthStore();
 
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+  // Note: checkAuth is called by the layout/page that renders this component
+  // AuthButton just reacts to the auth state
 
   if (isLoading) {
     return (
