@@ -156,12 +156,13 @@ export async function getSession(): Promise<{ accessToken: string; userId: strin
       'getCurrentUser timed out'
     );
     console.log('[Auth] getSession: user fetched');
-    const accessToken = session.tokens?.accessToken?.toString();
-    if (!accessToken) {
-      console.log('[Auth] getSession: no access token in session');
+    // Use ID token (not access token) - Cognito authorizer needs email claim
+    const idToken = session.tokens?.idToken?.toString();
+    if (!idToken) {
+      console.log('[Auth] getSession: no ID token in session');
       return null;
     }
-    return { accessToken, userId: user.userId };
+    return { accessToken: idToken, userId: user.userId };
   } catch (error) {
     console.error('[Auth] getSession error:', error);
     return null;
