@@ -89,6 +89,18 @@ export function buildGSI1Query(filters: TournamentFilters): {
     };
   }
 
+  // Use GSI1SK >= :start to efficiently skip past tournaments
+  // GSI1SK format is "startDate#org#externalId", so string comparison works
+  if (filters.startAfter) {
+    return {
+      KeyConditionExpression: 'GSI1PK = :pk AND GSI1SK >= :start',
+      ExpressionAttributeValues: {
+        ...values,
+        ':start': filters.startAfter,
+      },
+    };
+  }
+
   return {
     KeyConditionExpression: 'GSI1PK = :pk',
     ExpressionAttributeValues: values,

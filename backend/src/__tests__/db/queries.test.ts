@@ -46,4 +46,12 @@ describe('buildGSI1Query', () => {
     });
     expect(result.KeyConditionExpression).toContain('GSI1SK BETWEEN');
   });
+
+  it('uses GSI1SK >= for startAfter only', () => {
+    const result = buildGSI1Query({
+      startAfter: '2025-12-27',
+    });
+    expect(result.KeyConditionExpression).toBe('GSI1PK = :pk AND GSI1SK >= :start');
+    expect(result.ExpressionAttributeValues[':start']).toBe('2025-12-27');
+  });
 });
