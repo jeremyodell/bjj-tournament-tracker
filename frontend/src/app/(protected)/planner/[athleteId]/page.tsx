@@ -2,21 +2,26 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAthletes } from '@/hooks/useAthletes';
 import { usePlannerStore } from '@/stores/plannerStore';
+import { useSubscriptionStore } from '@/stores/subscriptionStore';
 import { PlannerConfig } from '@/components/planner/PlannerConfig';
 import { PlannerResults, PlannerMobileFooter, PlannerMobileConfigSheet } from '@/components/planner/PlannerResults';
+import { UpgradeModal } from '@/components/shared/UpgradeModal';
 
 export default function PlannerPage() {
   const params = useParams();
+  const router = useRouter();
   const athleteId = params.athleteId as string;
 
   const { data: athletesData, isLoading, error } = useAthletes();
   const { setAthleteId } = usePlannerStore();
+  const { isPro, isLoading: isSubscriptionLoading, checkSubscription } = useSubscriptionStore();
 
   const [isMobileConfigOpen, setIsMobileConfigOpen] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Find the athlete
   const athlete = athletesData?.athletes.find((a) => a.athleteId === athleteId);
@@ -27,6 +32,27 @@ export default function PlannerPage() {
       setAthleteId(athleteId);
     }
   }, [athleteId, setAthleteId]);
+
+  // Check subscription on mount
+  useEffect(() => {
+    checkSubscription();
+  }, [checkSubscription]);
+
+  // Show upgrade modal if not Pro (after subscription check completes)
+  useEffect(() => {
+    if (!isSubscriptionLoading && !isPro) {
+      setShowUpgradeModal(true);
+    }
+  }, [isSubscriptionLoading, isPro]);
+
+  // Handle "Maybe Later" - redirect to profile since user can't use planner without Pro
+  const handleUpgradeModalClose = () => {
+    setShowUpgradeModal(false);
+    // If still not Pro after closing modal, redirect to profile
+    if (!isPro) {
+      router.push('/profile');
+    }
+  };
 
   // Loading state
   if (isLoading) {
@@ -185,6 +211,13 @@ export default function PlannerPage() {
           animation: slide-up 0.3s ease-out;
         }
       `}</style>
+
+      {/* Upgrade Modal for non-Pro users */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={handleUpgradeModalClose}
+        athleteName={athlete.name}
+      />
     </div>
   );
 }
