@@ -118,20 +118,6 @@ export function ValueProps() {
           ))}
         </div>
       </div>
-
-      {/* CSS for shimmer animation */}
-      <style jsx>{`
-        @keyframes icon-shimmer {
-          0%, 100% {
-            opacity: 1;
-            filter: drop-shadow(0 0 4px rgba(212, 175, 55, 0.3));
-          }
-          50% {
-            opacity: 0.85;
-            filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.5));
-          }
-        }
-      `}</style>
     </section>
   );
 }
