@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@jest/globals';
-import { mapJJWLToTournament } from '../../fetchers/jjwlFetcher.js';
+import { mapJJWLToTournament, parseJJWLDate } from '../../fetchers/jjwlFetcher.js';
 import type { JJWLEvent } from '../../fetchers/types.js';
 
 describe('mapJJWLToTournament', () => {
@@ -52,5 +52,51 @@ describe('mapJJWLToTournament', () => {
   it('maps banner URL', () => {
     const result = mapJJWLToTournament(baseEvent);
     expect(result.bannerUrl).toBe('https://jjwl.com/img/event.jpg');
+  });
+});
+
+describe('parseJJWLDate', () => {
+  it('returns null for empty string', () => {
+    expect(parseJJWLDate('')).toBeNull();
+  });
+
+  it('returns null for whitespace-only string', () => {
+    expect(parseJJWLDate('   ')).toBeNull();
+  });
+
+  it('parses YYYY-MM-DD format', () => {
+    expect(parseJJWLDate('2025-04-10')).toBe('2025-04-10');
+  });
+
+  it('parses "Jan 15, 2025" format', () => {
+    expect(parseJJWLDate('Jan 15, 2025')).toBe('2025-01-15');
+  });
+
+  it('parses "January 15, 2025" format', () => {
+    expect(parseJJWLDate('January 15, 2025')).toBe('2025-01-15');
+  });
+
+  it('parses "15 Jan 2025" format', () => {
+    expect(parseJJWLDate('15 Jan 2025')).toBe('2025-01-15');
+  });
+
+  it('parses "15/01/2025" format', () => {
+    expect(parseJJWLDate('15/01/2025')).toBe('2025-01-15');
+  });
+
+  it('parses "15-01-2025" format', () => {
+    expect(parseJJWLDate('15-01-2025')).toBe('2025-01-15');
+  });
+
+  it('handles leading/trailing whitespace', () => {
+    expect(parseJJWLDate('  2025-04-10  ')).toBe('2025-04-10');
+  });
+
+  it('returns null for unparseable format', () => {
+    expect(parseJJWLDate('not a date')).toBeNull();
+  });
+
+  it('returns null for partial date', () => {
+    expect(parseJJWLDate('January 2025')).toBeNull();
   });
 });
