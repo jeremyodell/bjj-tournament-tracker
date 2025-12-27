@@ -8,15 +8,30 @@ const IS_DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === 'true';
 const DEV_USER_KEY = 'dev-auth-user';
 
 // Configure Amplify - values come from environment (skip in dev mode)
-if (!IS_DEV_MODE) {
+const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+const userPoolClientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
+
+// Debug: Log config status (remove in production)
+if (typeof window !== 'undefined') {
+  console.log('[Auth Config]', {
+    IS_DEV_MODE,
+    hasUserPoolId: !!userPoolId,
+    hasClientId: !!userPoolClientId,
+    userPoolId: userPoolId ? userPoolId.substring(0, 10) + '...' : 'NOT SET',
+  });
+}
+
+if (!IS_DEV_MODE && userPoolId && userPoolClientId) {
   Amplify.configure({
     Auth: {
       Cognito: {
-        userPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || '',
-        userPoolClientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || '',
+        userPoolId,
+        userPoolClientId,
       }
     }
   });
+} else if (!IS_DEV_MODE) {
+  console.error('[Auth] Cognito not configured - missing environment variables');
 }
 
 export interface AuthUser {
