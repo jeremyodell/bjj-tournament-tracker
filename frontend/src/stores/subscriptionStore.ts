@@ -19,7 +19,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
       isPro: false,
       tier: 'free',
       expiresAt: null,
-      isLoading: false,
+      isLoading: true,  // Start as true, will be set to false after check
 
       setSubscription: (isPro: boolean, expiresAt?: string) => {
         set({
