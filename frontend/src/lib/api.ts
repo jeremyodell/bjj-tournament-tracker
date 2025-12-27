@@ -69,4 +69,51 @@ export async function removeFromWishlist(accessToken: string, tournamentId: stri
   });
 }
 
+// Athlete types and API functions
+export interface Athlete {
+  athleteId: string;
+  name: string;
+  beltRank: string | null;
+  birthYear: number | null;
+  weightClass: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateAthleteInput {
+  name: string;
+  beltRank?: string;
+  birthYear?: number;
+  gender?: string;
+  weight?: number;
+  gymName?: string;
+}
+
+export async function fetchAthletes(accessToken: string): Promise<{ athletes: Athlete[] }> {
+  const response = await api.get('/athletes', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  return response.data;
+}
+
+export async function createAthlete(accessToken: string, input: CreateAthleteInput): Promise<Athlete> {
+  const response = await api.post('/athletes', input, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  return response.data;
+}
+
+export async function updateAthlete(accessToken: string, athleteId: string, input: Partial<CreateAthleteInput>): Promise<Athlete> {
+  const response = await api.put(`/athletes/${athleteId}`, input, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  return response.data;
+}
+
+export async function deleteAthlete(accessToken: string, athleteId: string): Promise<void> {
+  await api.delete(`/athletes/${athleteId}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
 export default api;
