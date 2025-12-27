@@ -16,6 +16,7 @@
   /* Brand accent colors */
   --color-accent-ibjjf: var(--accent-ibjjf);
   --color-accent-jjwl: var(--accent-jjwl);
+  --color-accent-gold: var(--accent-gold);
 
   /* Shadcn compatibility */
   --color-sidebar-ring: var(--sidebar-ring);
@@ -83,6 +84,7 @@
   /* Brand accent colors */
   --accent-ibjjf: #00F0FF; /* Electric Cyan */
   --accent-jjwl: #FF2D6A; /* Hot Magenta */
+  --accent-gold: #d4af37;
 
   /* Glow effects for cards */
   --glow-ibjjf: 0 0 30px rgba(0, 240, 255, 0.3);
