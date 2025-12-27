@@ -24,8 +24,8 @@ export function Footer() {
             <Image
               src="/logo.png"
               alt="BJJComps logo"
-              width={36}
-              height={24}
+              width={28}
+              height={28}
               className="opacity-60 hover:opacity-100 transition-opacity duration-300"
             />
           </Link>

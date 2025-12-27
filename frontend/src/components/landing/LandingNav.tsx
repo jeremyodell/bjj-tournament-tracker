@@ -30,7 +30,7 @@ export function LandingNav() {
           <Image
             src="/logo.png"
             alt="BJJComps logo"
-            width={72}
+            width={48}
             height={48}
             className="transition-transform duration-300 group-hover:scale-105"
             priority
