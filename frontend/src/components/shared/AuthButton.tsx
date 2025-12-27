@@ -1,20 +1,13 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 
 export function AuthButton() {
-  const { user, isAuthenticated, isLoading, logout, checkAuth } = useAuthStore();
-  const hasCheckedAuth = useRef(false);
-
-  // Check auth once on mount (needed for non-protected pages)
-  useEffect(() => {
-    if (!hasCheckedAuth.current) {
-      hasCheckedAuth.current = true;
-      checkAuth();
-    }
-  }, [checkAuth]);
+  // Read auth state from store - don't trigger checkAuth here to avoid loops
+  // Protected pages handle auth via ProtectedLayout
+  // Non-protected pages use cached state (session verified on actual API calls)
+  const { user, isAuthenticated, isLoading, logout } = useAuthStore();
 
   if (isLoading) {
     return (

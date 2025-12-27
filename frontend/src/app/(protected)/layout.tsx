@@ -28,23 +28,19 @@ export default function ProtectedLayout({
     }
   }, [isLoading, isAuthenticated, router]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#d4af37] border-t-transparent" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
-
+  // Always render the nav to prevent AuthButton from unmounting/remounting
+  // which was causing an infinite loop (each remount reset the checkAuth ref guard)
   return (
     <div className="min-h-screen bg-black">
       <LandingNav />
       <main className="pt-20">
-        {children}
+        {isLoading ? (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#d4af37] border-t-transparent" />
+          </div>
+        ) : !isAuthenticated ? null : (
+          children
+        )}
       </main>
     </div>
   );
