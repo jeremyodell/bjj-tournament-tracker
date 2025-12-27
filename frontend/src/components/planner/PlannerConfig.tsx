@@ -1,7 +1,10 @@
 // frontend/src/components/planner/PlannerConfig.tsx
 'use client';
 
+import { useState } from 'react';
 import { usePlannerStore } from '@/stores/plannerStore';
+import { useTournaments } from '@/hooks/useTournaments';
+import { generatePlan, getHomeLocationFromAirport } from '@/lib/planGenerator';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -16,18 +19,60 @@ interface PlannerConfigProps {
 }
 
 export function PlannerConfig({ athleteName }: PlannerConfigProps) {
-  const { config, updateConfig, removeMustGo, isGenerating, setIsGenerating } = usePlannerStore();
+  const { config, updateConfig, removeMustGo, isGenerating, setIsGenerating, setPlan } = usePlannerStore();
+  const {
+    data: tournamentsData,
+    isLoading: isTournamentsLoading,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useTournaments();
+  const [generationError, setGenerationError] = useState<string | null>(null);
 
   const availableBudget = config.totalBudget - config.reserveBudget;
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
+    // Clear any previous error
+    setGenerationError(null);
+
+    const homeLocation = getHomeLocationFromAirport(config.homeAirport);
+    if (!homeLocation) {
+      setGenerationError('Invalid airport code. Please enter a valid 3-letter airport code.');
+      return;
+    }
+
     setIsGenerating(true);
-    // Actual generation logic will be implemented in Task 4.3
-    // For now, simulate a delay then reset
-    setTimeout(() => {
+
+    try {
+      // Fetch all pages if there are more to load
+      while (hasNextPage) {
+        await fetchNextPage();
+      }
+
+      // Flatten all tournament pages into a single array
+      const allTournaments = tournamentsData?.pages.flatMap(page => page.tournaments) ?? [];
+
+      // Use setTimeout to allow UI to update before potentially heavy computation
+      setTimeout(() => {
+        try {
+          const plan = generatePlan({
+            config,
+            allTournaments,
+            homeLocation,
+          });
+          setPlan(plan);
+        } finally {
+          setIsGenerating(false);
+        }
+      }, 100);
+    } catch {
+      setGenerationError('Failed to load all tournaments. Please try again.');
       setIsGenerating(false);
-    }, 1500);
+    }
   };
+
+  // Check if the airport code is valid
+  const isAirportValid = config.homeAirport ? !!getHomeLocationFromAirport(config.homeAirport) : false;
 
   return (
     <div
@@ -240,14 +285,14 @@ export function PlannerConfig({ athleteName }: PlannerConfigProps) {
       <div className="pt-4 border-t" style={{ borderColor: 'var(--glass-border)' }}>
         <button
           onClick={handleGenerate}
-          disabled={isGenerating || !config.homeAirport}
+          disabled={isGenerating || isTournamentsLoading || isFetchingNextPage || !isAirportValid}
           className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
           style={{
             background: 'linear-gradient(135deg, #d4af37 0%, #c9a227 100%)',
             color: '#000',
           }}
         >
-          {isGenerating ? (
+          {isGenerating || isFetchingNextPage ? (
             <>
               <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle
@@ -264,7 +309,26 @@ export function PlannerConfig({ athleteName }: PlannerConfigProps) {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              Generating...
+              {isFetchingNextPage ? 'Loading all tournaments...' : 'Generating...'}
+            </>
+          ) : isTournamentsLoading ? (
+            <>
+              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+              Loading Tournaments...
             </>
           ) : (
             <>
@@ -275,9 +339,19 @@ export function PlannerConfig({ athleteName }: PlannerConfigProps) {
             </>
           )}
         </button>
-        {!config.homeAirport && (
+        {generationError && (
+          <p className="text-xs text-center mt-2 text-red-400">
+            {generationError}
+          </p>
+        )}
+        {!generationError && !config.homeAirport && (
           <p className="text-xs text-center mt-2 opacity-50">
             Enter your home airport to generate a plan
+          </p>
+        )}
+        {!generationError && config.homeAirport && !isAirportValid && (
+          <p className="text-xs text-center mt-2 text-red-400">
+            Airport code not recognized. Try common codes like DFW, LAX, JFK, etc.
           </p>
         )}
       </div>
