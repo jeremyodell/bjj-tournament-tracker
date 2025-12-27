@@ -20,11 +20,11 @@ export function Footer() {
       <div className="max-w-7xl mx-auto px-6 py-6">
         <div className="flex flex-col items-center justify-center gap-4 text-sm text-white/40 sm:flex-row sm:gap-6">
           {/* Small Logo */}
-          <Link href="/" className="flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center">
+          <Link href="/" className="flex-shrink-0 min-h-[44px] flex items-center justify-center">
             <Image
               src="/logo.png"
               alt="BJJComps logo"
-              width={24}
+              width={36}
               height={24}
               className="opacity-60 hover:opacity-100 transition-opacity duration-300"
             />
