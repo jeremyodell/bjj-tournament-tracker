@@ -36,4 +36,37 @@ export async function fetchTournament(id: string): Promise<Tournament> {
   return response.data;
 }
 
+// Wishlist types and API functions
+export interface WishlistItem {
+  PK: string;
+  SK: string;
+  tournamentPK: string;
+  status: 'interested' | 'registered' | 'attending';
+  athleteIds: string[];
+  createdAt: string;
+  updatedAt: string;
+  tournament?: Tournament;
+}
+
+export async function fetchWishlist(accessToken: string): Promise<{ wishlist: WishlistItem[] }> {
+  const response = await api.get('/wishlist', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  return response.data;
+}
+
+export async function addToWishlist(accessToken: string, tournamentId: string): Promise<WishlistItem> {
+  const response = await api.post('/wishlist',
+    { tournamentId },
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  return response.data;
+}
+
+export async function removeFromWishlist(accessToken: string, tournamentId: string): Promise<void> {
+  await api.delete(`/wishlist/${encodeURIComponent(tournamentId)}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
 export default api;
