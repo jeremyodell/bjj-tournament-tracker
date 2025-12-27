@@ -78,6 +78,7 @@ export function buildGSI1Query(filters: TournamentFilters): {
 } {
   const values: Record<string, unknown> = { ':pk': 'TOURNAMENTS' };
 
+  // Use GSI1SK (startDate#org#externalId) for efficient date range queries
   if (filters.startAfter && filters.startBefore) {
     return {
       KeyConditionExpression: 'GSI1PK = :pk AND GSI1SK BETWEEN :start AND :end',
@@ -85,6 +86,28 @@ export function buildGSI1Query(filters: TournamentFilters): {
         ...values,
         ':start': filters.startAfter,
         ':end': filters.startBefore + 'Z', // Ensure end is inclusive
+      },
+    };
+  }
+
+  // Use GSI1SK >= :start to efficiently skip past tournaments
+  // GSI1SK format is "startDate#org#externalId", so string comparison works
+  if (filters.startAfter) {
+    return {
+      KeyConditionExpression: 'GSI1PK = :pk AND GSI1SK >= :start',
+      ExpressionAttributeValues: {
+        ...values,
+        ':start': filters.startAfter,
+      },
+    };
+  }
+
+  if (filters.startBefore) {
+    return {
+      KeyConditionExpression: 'GSI1PK = :pk AND GSI1SK <= :end',
+      ExpressionAttributeValues: {
+        ...values,
+        ':end': filters.startBefore + 'Z',
       },
     };
   }
