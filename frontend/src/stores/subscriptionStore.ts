@@ -2,6 +2,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+// Dev mode - auto-enables Pro for testing
+const IS_DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === 'true';
+
 interface SubscriptionState {
   isPro: boolean;
   tier: 'free' | 'pro';
@@ -16,10 +19,10 @@ interface SubscriptionState {
 export const useSubscriptionStore = create<SubscriptionState>()(
   persist(
     (set, get) => ({
-      isPro: false,
-      tier: 'free',
+      isPro: IS_DEV_MODE, // Auto-enable Pro in dev mode
+      tier: IS_DEV_MODE ? 'pro' : 'free',
       expiresAt: null,
-      isLoading: true,  // Start as true, will be set to false after check
+      isLoading: !IS_DEV_MODE,  // Skip loading state in dev mode
 
       setSubscription: (isPro: boolean, expiresAt?: string) => {
         set({
@@ -30,6 +33,13 @@ export const useSubscriptionStore = create<SubscriptionState>()(
       },
 
       checkSubscription: async () => {
+        // In dev mode, always set as Pro
+        if (IS_DEV_MODE) {
+          set({ isPro: true, tier: 'pro', isLoading: false });
+          console.log('[DEV MODE] Subscription set to Pro');
+          return;
+        }
+
         set({ isLoading: true });
 
         try {
