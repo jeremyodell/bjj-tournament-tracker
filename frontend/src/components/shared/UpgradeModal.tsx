@@ -20,6 +20,7 @@ const features = [
 export function UpgradeModal({ isOpen, onClose, athleteName }: UpgradeModalProps) {
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly' | null>(null);
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
   const setSubscription = useSubscriptionStore((state) => state.setSubscription);
 
   const handleClose = useCallback(() => {
@@ -28,46 +29,53 @@ export function UpgradeModal({ isOpen, onClose, athleteName }: UpgradeModalProps
     }
   }, [isUpgrading, onClose]);
 
-  // Handle escape key
+  // Handle escape key and body overflow
   useEffect(() => {
+    if (!isOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         handleClose();
       }
     };
 
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      // Prevent body scroll when modal is open
-      document.body.style.overflow = 'hidden';
-    }
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = originalOverflow;
     };
   }, [isOpen, handleClose]);
 
   const handleUpgrade = async (plan: 'monthly' | 'yearly') => {
     setSelectedPlan(plan);
     setIsUpgrading(true);
+    setUpgradeError(null);
 
-    // Mock upgrade - simulate API call delay
-    // In the future, this will redirect to Stripe checkout
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      // Mock upgrade - simulate API call delay
+      // In the future, this will redirect to Stripe checkout
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    // Calculate expiration date based on plan
-    const expiresAt = new Date();
-    if (plan === 'monthly') {
-      expiresAt.setMonth(expiresAt.getMonth() + 1);
-    } else {
-      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+      // Calculate expiration date based on plan
+      const expiresAt = new Date();
+      if (plan === 'monthly') {
+        expiresAt.setMonth(expiresAt.getMonth() + 1);
+      } else {
+        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+      }
+
+      setSubscription(true, expiresAt.toISOString());
+      onClose();
+    } catch (error) {
+      setUpgradeError('Failed to process upgrade. Please try again.');
+    } finally {
+      setIsUpgrading(false);
+      setSelectedPlan(null);
     }
-
-    setSubscription(true, expiresAt.toISOString());
-    setIsUpgrading(false);
-    setSelectedPlan(null);
-    onClose();
   };
 
   if (!isOpen) return null;
@@ -82,6 +90,9 @@ export function UpgradeModal({ isOpen, onClose, athleteName }: UpgradeModalProps
 
       {/* Modal */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="upgrade-modal-title"
         className="relative w-full max-w-md mx-4 p-6 rounded-2xl border"
         style={{
           background: 'rgba(20, 20, 20, 0.95)',
@@ -93,7 +104,7 @@ export function UpgradeModal({ isOpen, onClose, athleteName }: UpgradeModalProps
           <span className="text-2xl" role="img" aria-label="target">
             🎯
           </span>
-          <h2 className="text-xl font-bold">Unlock Season Planner</h2>
+          <h2 id="upgrade-modal-title" className="text-xl font-bold">Unlock Season Planner</h2>
         </div>
 
         {/* Description */}
@@ -200,6 +211,13 @@ export function UpgradeModal({ isOpen, onClose, athleteName }: UpgradeModalProps
             )}
           </button>
         </div>
+
+        {/* Error message */}
+        {upgradeError && (
+          <p className="text-red-500 text-sm text-center mb-4" role="alert">
+            {upgradeError}
+          </p>
+        )}
 
         {/* Maybe Later button */}
         <button

@@ -6,6 +6,7 @@ interface SubscriptionState {
   isPro: boolean;
   tier: 'free' | 'pro';
   expiresAt: string | null;
+  isLoading: boolean;
 
   // Actions
   setSubscription: (isPro: boolean, expiresAt?: string) => void;
@@ -18,6 +19,7 @@ export const useSubscriptionStore = create<SubscriptionState>()(
       isPro: false,
       tier: 'free',
       expiresAt: null,
+      isLoading: false,
 
       setSubscription: (isPro: boolean, expiresAt?: string) => {
         set({
@@ -28,20 +30,26 @@ export const useSubscriptionStore = create<SubscriptionState>()(
       },
 
       checkSubscription: async () => {
-        // For now, this is client-side only with mock functionality.
-        // Later, this will call the backend to verify subscription status.
-        const { expiresAt } = get();
+        set({ isLoading: true });
 
-        if (expiresAt) {
-          const isExpired = new Date(expiresAt) < new Date();
-          if (isExpired) {
-            set({ isPro: false, tier: 'free', expiresAt: null });
+        try {
+          // For now, this is client-side only with mock functionality.
+          // Later, this will call the backend to verify subscription status.
+          const { expiresAt } = get();
+
+          if (expiresAt) {
+            const isExpired = new Date(expiresAt) < new Date();
+            if (isExpired) {
+              set({ isPro: false, tier: 'free', expiresAt: null });
+            }
           }
-        }
 
-        // TODO: Add actual API call to verify subscription
-        // const response = await api.get('/subscription/status');
-        // set({ isPro: response.isPro, tier: response.tier, expiresAt: response.expiresAt });
+          // TODO: Add actual API call to verify subscription
+          // const response = await api.get('/subscription/status');
+          // set({ isPro: response.isPro, tier: response.tier, expiresAt: response.expiresAt });
+        } finally {
+          set({ isLoading: false });
+        }
       },
     }),
     {
