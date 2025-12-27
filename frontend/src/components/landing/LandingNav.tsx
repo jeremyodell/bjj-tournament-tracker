@@ -3,13 +3,14 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { AuthButton } from '@/components/shared/AuthButton';
 
 /**
  * LandingNav - Transparent navigation bar for the landing page hero section
  *
  * Design spec requirements:
  * - Logo (belt weave icon + "BJJComps" wordmark) on left
- * - "Browse Tournaments" link/button on right
+ * - "Browse Tournaments" link/button and auth controls on right
  * - Transparent over hero, minimal
  * - Gold accent for the button
  */
@@ -42,14 +43,20 @@ export function LandingNav() {
           </span>
         </Link>
 
-        {/* Browse Tournaments Button - min-h-[44px] for touch target */}
-        <Button
-          asChild
-          variant="outline"
-          className="min-h-[44px] border-[#d4af37]/50 text-[#d4af37] hover:bg-[#d4af37]/10 hover:border-[#d4af37] hover:text-[#d4af37] transition-all duration-300"
-        >
-          <Link href="/tournaments">Browse Tournaments</Link>
-        </Button>
+        {/* Right side: Browse Tournaments + Auth */}
+        <div className="flex items-center gap-4">
+          {/* Browse Tournaments Button - min-h-[44px] for touch target */}
+          <Button
+            asChild
+            variant="outline"
+            className="min-h-[44px] border-[#d4af37]/50 text-[#d4af37] hover:bg-[#d4af37]/10 hover:border-[#d4af37] hover:text-[#d4af37] transition-all duration-300"
+          >
+            <Link href="/tournaments">Browse Tournaments</Link>
+          </Button>
+
+          {/* Auth Button */}
+          <AuthButton />
+        </div>
       </div>
     </nav>
   );

@@ -32,6 +32,10 @@ Parameters:
       - 'false'
     Description: Enable daily scheduled tournament sync
 
+  CognitoUserPoolArn:
+    Type: String
+    Description: Cognito User Pool ARN for API Gateway authorizer
+
 Resources:
   # ============================================
   # DynamoDB Table
@@ -149,6 +153,12 @@ Resources:
           HttpMethod: '*'
           ThrottlingBurstLimit: 100
           ThrottlingRateLimit: 60
+      Auth:
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !Ref CognitoUserPoolArn
+            Identity:
+              Header: Authorization
 
   # ============================================
   # Lambda Functions
@@ -211,6 +221,114 @@ Resources:
     Metadata:
       BuildMethod: makefile
 
+  WishlistFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub bjj-tournament-tracker-wishlist-${Stage}
+      Handler: dist/handlers/wishlist.handler
+      CodeUri: .
+      Description: Handles user wishlist operations (add, remove, update tournaments)
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TournamentsTable
+      Events:
+        ListWishlist:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /wishlist
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AddToWishlist:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /wishlist
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        UpdateWishlistItem:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /wishlist/{tournamentId}
+            Method: PUT
+            Auth:
+              Authorizer: CognitoAuthorizer
+        RemoveFromWishlist:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /wishlist/{tournamentId}
+            Method: DELETE
+            Auth:
+              Authorizer: CognitoAuthorizer
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/wishlist.ts
+        External:
+          - '@aws-sdk/*'
+
+  AthletesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub bjj-tournament-tracker-athletes-${Stage}
+      Handler: dist/handlers/athletes.handler
+      CodeUri: .
+      Description: Handles athlete management (create, update, delete, list)
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TournamentsTable
+      Events:
+        ListAthletes:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /athletes
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        CreateAthlete:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /athletes
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        UpdateAthlete:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /athletes/{athleteId}
+            Method: PUT
+            Auth:
+              Authorizer: CognitoAuthorizer
+        DeleteAthlete:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /athletes/{athleteId}
+            Method: DELETE
+            Auth:
+              Authorizer: CognitoAuthorizer
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/athletes.ts
+        External:
+          - '@aws-sdk/*'
+
   # ============================================
   # CloudWatch Alarms (Optional)
   # ============================================
@@ -269,6 +387,14 @@ Outputs:
   SyncFunctionArn:
     Description: Sync Lambda Function ARN
     Value: !GetAtt SyncFunction.Arn
+
+  WishlistFunctionArn:
+    Description: Wishlist Lambda Function ARN
+    Value: !GetAtt WishlistFunction.Arn
+
+  AthletesFunctionArn:
+    Description: Athletes Lambda Function ARN
+    Value: !GetAtt AthletesFunction.Arn
 
   DynamoDBTableName:
     Description: DynamoDB Table Name

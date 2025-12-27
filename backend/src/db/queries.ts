@@ -1,4 +1,4 @@
-import { QueryCommand, BatchWriteCommand, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { QueryCommand, BatchWriteCommand, BatchGetCommand, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { docClient, TABLE_NAME, GSI1_NAME } from './client.js';
 import { buildTournamentPK, buildVenuePK, buildVenueLookupSK } from './types.js';
 import type { TournamentItem, VenueItem } from './types.js';
@@ -275,4 +275,35 @@ export async function getLowConfidenceVenues(): Promise<VenueItem[]> {
 
   const result = await docClient.send(command);
   return (result.Items || []) as VenueItem[];
+}
+
+/**
+ * Batch get tournaments by their PKs
+ */
+export async function queryTournamentsByPKs(pks: string[]): Promise<TournamentItem[]> {
+  if (pks.length === 0) return [];
+
+  // BatchGet has a limit of 100 items
+  const batches: string[][] = [];
+  for (let i = 0; i < pks.length; i += 100) {
+    batches.push(pks.slice(i, i + 100));
+  }
+
+  const results: TournamentItem[] = [];
+
+  for (const batch of batches) {
+    const command = new BatchGetCommand({
+      RequestItems: {
+        [TABLE_NAME]: {
+          Keys: batch.map(pk => ({ PK: pk, SK: 'META' })),
+        },
+      },
+    });
+
+    const result = await docClient.send(command);
+    const items = result.Responses?.[TABLE_NAME] || [];
+    results.push(...(items as TournamentItem[]));
+  }
+
+  return results;
 }

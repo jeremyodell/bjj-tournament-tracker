@@ -1,60 +1,19 @@
+// frontend/src/components/planner/PlannedTournamentCard.tsx
 'use client';
 
-import { useRouter } from 'next/navigation';
-import type { Tournament } from '@/lib/types';
-import { useAuthStore } from '@/stores/authStore';
-import { useIsInWishlist, useWishlistMutations } from '@/hooks/useWishlist';
+import type { PlannedTournament } from '@/stores/plannerStore';
+import { usePlannerStore } from '@/stores/plannerStore';
 
-interface TournamentCardProps {
-  tournament: Tournament;
+interface PlannedTournamentCardProps {
+  plannedTournament: PlannedTournament;
   index?: number;
 }
 
-export function TournamentCard({ tournament, index }: TournamentCardProps) {
-  const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
-  const isInWishlist = useIsInWishlist(tournament.id);
-  const { addMutation, removeMutation } = useWishlistMutations();
+export function PlannedTournamentCard({ plannedTournament, index }: PlannedTournamentCardProps) {
+  const { lockTournament, removeTournament } = usePlannerStore();
+  const { tournament, registrationCost, travelCost, travelType, isLocked } = plannedTournament;
 
-  const handleHeartClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (!isAuthenticated) {
-      router.push('/login');
-      return;
-    }
-
-    if (isInWishlist) {
-      removeMutation.mutate(tournament.id);
-    } else {
-      addMutation.mutate(tournament.id);
-    }
-  };
-
-  const isLoading = addMutation.isPending || removeMutation.isPending;
-  const getDaysUntil = (start: string) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const startDate = new Date(start);
-    startDate.setHours(0, 0, 0, 0);
-    const diffTime = startDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
-  const daysUntil = getDaysUntil(tournament.startDate);
-
-  const getTimeLabel = () => {
-    if (daysUntil < 0) return null;
-    if (daysUntil === 0) return 'Today';
-    if (daysUntil === 1) return 'Tomorrow';
-    if (daysUntil <= 7) return `In ${daysUntil} days`;
-    if (daysUntil <= 30) return `In ${Math.ceil(daysUntil / 7)} weeks`;
-    return null;
-  };
-
-  const timeLabel = getTimeLabel();
+  const totalCost = registrationCost + travelCost;
 
   // Get org-based accent colors
   const isIBJJF = tournament.org === 'IBJJF';
@@ -70,51 +29,44 @@ export function TournamentCard({ tournament, index }: TournamentCardProps) {
   const weekday = startDate.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
   const year = startDate.getFullYear();
 
+  const handleLock = () => {
+    lockTournament(tournament.id);
+  };
+
+  const handleRemove = () => {
+    removeTournament(tournament.id);
+  };
+
   return (
     <div
       className={`group relative rounded-2xl border transition-all duration-300 ${glowClass}`}
       style={{
         background: 'var(--glass-bg)',
-        borderColor: 'var(--glass-border)',
+        borderColor: isLocked ? '#d4af37' : 'var(--glass-border)',
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
         animationDelay: `${(index || 0) * 100}ms`,
       }}
     >
-      {/* Heart/Wishlist Button */}
-      <button
-        onClick={handleHeartClick}
-        disabled={isLoading}
-        className="absolute top-3 right-3 z-10 p-2 rounded-full transition-all duration-300 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-        style={{
-          background: 'rgba(0, 0, 0, 0.3)',
-          backdropFilter: 'blur(8px)',
-        }}
-        aria-label={isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
-      >
-        <svg
-          className="w-5 h-5 transition-all duration-300"
-          viewBox="0 0 24 24"
-          fill={isInWishlist ? '#d4af37' : 'none'}
-          stroke={isInWishlist ? '#d4af37' : 'currentColor'}
-          strokeWidth={2}
+      {/* Must-Go Badge */}
+      {isLocked && (
+        <div
+          className="absolute -top-2 -right-2 z-10 px-2 py-1 rounded-full text-xs font-bold"
           style={{
-            filter: isInWishlist ? 'drop-shadow(0 0 4px rgba(212, 175, 55, 0.5))' : 'none',
+            background: 'linear-gradient(135deg, #d4af37 0%, #c9a227 100%)',
+            color: '#000',
           }}
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
-          />
-        </svg>
-      </button>
+          Must-Go
+        </div>
+      )}
 
       <div className="p-4 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
-        {/* DATE BLOCK - Hero Element */}
+        {/* DATE BLOCK */}
         <div className="flex-shrink-0 flex sm:block items-center gap-3 sm:gap-0">
           {/* Mobile: horizontal layout */}
-          <div className="sm:hidden flex items-center gap-2 px-4 py-2 rounded-xl border-l-2 border-t border-r border-b transition-all duration-300"
+          <div
+            className="sm:hidden flex items-center gap-2 px-4 py-2 rounded-xl border-l-2 border-t border-r border-b transition-all duration-300"
             style={{
               background: 'rgba(255, 255, 255, 0.03)',
               borderLeftColor: accentColor,
@@ -131,7 +83,7 @@ export function TournamentCard({ tournament, index }: TournamentCardProps) {
               {day}
             </div>
             <div className="text-xs font-medium opacity-40">{year}</div>
-            <div className="text-xs font-medium opacity-60">•</div>
+            <div className="text-xs font-medium opacity-60">-</div>
             <div className="text-xs font-medium opacity-60 tracking-wider">{weekday}</div>
           </div>
 
@@ -162,7 +114,7 @@ export function TournamentCard({ tournament, index }: TournamentCardProps) {
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           {/* Top Section */}
           <div className="space-y-3">
-            {/* LOCATION - Second Most Prominent */}
+            {/* LOCATION */}
             <div className="flex items-start gap-2">
               <svg
                 className="h-5 w-5 mt-0.5 flex-shrink-0 opacity-60"
@@ -188,7 +140,7 @@ export function TournamentCard({ tournament, index }: TournamentCardProps) {
               </span>
             </div>
 
-            {/* ORG + EVENT NAME - Third Tier */}
+            {/* ORG + EVENT NAME */}
             <div className="flex items-start gap-3">
               <div
                 className="px-3 py-1 rounded-lg text-xs font-bold tracking-wider flex-shrink-0 transition-all duration-300"
@@ -205,35 +157,41 @@ export function TournamentCard({ tournament, index }: TournamentCardProps) {
               </h3>
             </div>
 
-            {/* Time Label and Distance */}
-            <div className="flex flex-wrap gap-2">
-              {timeLabel && (
-                <div
-                  className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid var(--glass-border)',
-                  }}
-                >
-                  {timeLabel}
-                </div>
-              )}
-              {tournament.distanceMiles !== undefined && (
-                <div
-                  className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid var(--glass-border)',
-                  }}
-                >
-                  {tournament.distanceMiles} mi away
-                </div>
-              )}
-            </div>
-          </div>
+            {/* Cost Breakdown + Travel Type */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Travel Type Icon */}
+              <div
+                className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium gap-1.5"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid var(--glass-border)',
+                }}
+              >
+                {travelType === 'drive' ? (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                )}
+                {travelType === 'drive' ? 'Drive' : 'Fly'}
+              </div>
 
-          {/* Bottom Section */}
-          <div className="flex items-center justify-between mt-4 pt-4 border-t" style={{ borderColor: 'var(--glass-border)' }}>
+              {/* Cost Breakdown */}
+              <div
+                className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium"
+                style={{
+                  background: 'rgba(212, 175, 55, 0.1)',
+                  border: '1px solid rgba(212, 175, 55, 0.3)',
+                  color: '#d4af37',
+                }}
+              >
+                Reg ${registrationCost} + Travel ${travelCost} = ${totalCost}
+              </div>
+            </div>
+
             {/* Event type tags */}
             <div className="flex flex-wrap gap-2">
               {tournament.gi && (
@@ -252,6 +210,61 @@ export function TournamentCard({ tournament, index }: TournamentCardProps) {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Bottom Section - Actions */}
+          <div className="flex items-center justify-between mt-4 pt-4 border-t" style={{ borderColor: 'var(--glass-border)' }}>
+            <div className="flex items-center gap-2">
+              {/* Lock Button */}
+              {!isLocked && (
+                <button
+                  onClick={handleLock}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:scale-105"
+                  style={{
+                    background: 'rgba(212, 175, 55, 0.15)',
+                    color: '#d4af37',
+                    border: '1px solid rgba(212, 175, 55, 0.3)',
+                  }}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  Lock
+                </button>
+              )}
+
+              {/* Remove Button */}
+              <button
+                onClick={handleRemove}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 hover:scale-105"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  color: '#ef4444',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                }}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Remove
+              </button>
+
+              {/* Swap Button - Disabled for now */}
+              <button
+                disabled
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium opacity-50 cursor-not-allowed"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid var(--glass-border)',
+                }}
+                title="Swap feature coming soon"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+                Swap
+              </button>
+            </div>
 
             {/* View Details Link */}
             {tournament.registrationUrl && (
@@ -259,7 +272,7 @@ export function TournamentCard({ tournament, index }: TournamentCardProps) {
                 href={tournament.registrationUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group/button flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 hover:scale-105"
+                className="group/button flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 hover:scale-105"
                 style={{
                   background: `${accentColor}30`,
                   color: accentColor,
