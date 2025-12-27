@@ -1,13 +1,20 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 
 export function AuthButton() {
-  const { user, isAuthenticated, isLoading, logout } = useAuthStore();
+  const { user, isAuthenticated, isLoading, logout, checkAuth } = useAuthStore();
+  const hasCheckedAuth = useRef(false);
 
-  // Note: checkAuth is called by the layout/page that renders this component
-  // AuthButton just reacts to the auth state
+  // Check auth once on mount (needed for non-protected pages)
+  useEffect(() => {
+    if (!hasCheckedAuth.current) {
+      hasCheckedAuth.current = true;
+      checkAuth();
+    }
+  }, [checkAuth]);
 
   if (isLoading) {
     return (

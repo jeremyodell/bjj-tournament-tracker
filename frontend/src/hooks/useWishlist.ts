@@ -4,7 +4,7 @@ import { fetchWishlist, addToWishlist, removeFromWishlist } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 
 export function useWishlist() {
-  const { isAuthenticated, getAccessToken } = useAuthStore();
+  const { isAuthenticated, isLoading, getAccessToken } = useAuthStore();
 
   return useQuery({
     queryKey: ['wishlist'],
@@ -13,8 +13,10 @@ export function useWishlist() {
       if (!token) throw new Error('Not authenticated');
       return fetchWishlist(token);
     },
-    enabled: isAuthenticated,
+    // Only enable when auth check is complete AND user is authenticated
+    enabled: !isLoading && isAuthenticated,
     staleTime: 30 * 1000, // 30 seconds
+    retry: false, // Don't retry on auth failures
   });
 }
 
