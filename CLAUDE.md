@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
@@ -61,8 +61,8 @@ bjj-tournament-tracker/
 - **User Pool:** `bjj-tournament-tracker-users-{stage}`
 - **User Pool Client:** `bjj-tournament-tracker-web-{stage}`
 - **Auth flows:** SRP, password, refresh token
-- **Identity Providers:** Cognito (email/password)
-  - Google OAuth: NOT YET CONFIGURED (see Auth Setup below)
+- **Identity Providers:** Cognito (email/password), Google OAuth
+- **Hosted UI Domain:** `bjj-tournament-tracker-{stage}.auth.{region}.amazoncognito.com`
 
 ### DynamoDB (Database)
 - **Table:** `bjj-tournament-tracker-{stage}`
@@ -87,7 +87,9 @@ bjj-tournament-tracker/
 NEXT_PUBLIC_API_URL=https://xxx.execute-api.us-east-1.amazonaws.com/dev
 NEXT_PUBLIC_COGNITO_USER_POOL_ID=us-east-1_xxxxx
 NEXT_PUBLIC_COGNITO_CLIENT_ID=xxxxx
+NEXT_PUBLIC_COGNITO_DOMAIN=bjj-tournament-tracker-dev.auth.us-east-1.amazoncognito.com
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=xxxxx
+NEXT_PUBLIC_DEV_MODE=true  # Set to bypass Cognito for local testing
 ```
 
 ### Backend (`backend/.env`)
@@ -105,6 +107,7 @@ npm install
 npm run dev          # Start dev server (http://localhost:3000)
 npm run build        # Production build
 npm test             # Run Vitest tests
+npm run test:coverage # Run tests with coverage
 npm run lint         # ESLint
 ```
 
@@ -114,12 +117,22 @@ cd backend
 npm install
 sam build            # Build SAM application
 sam deploy           # Deploy to AWS
-npm test             # Run tests
+npm test             # Run unit tests
+npm run test:integration  # Run integration tests
+npm run test:all     # Run all tests
 
-# Local DynamoDB
-docker compose up -d                    # Start local DynamoDB
-npm run create-table                    # Create local table
-npm run seed                            # Seed test data
+# Local Development
+npm run dev:setup    # First-time: start DynamoDB, create table, seed data
+npm run dev:start    # Daily: start DynamoDB + Express dev server
+npm run dev          # Start Express dev server only (requires DynamoDB running)
+
+# Database Management
+docker compose up -d       # Start local DynamoDB
+npm run db:create          # Create local table
+npm run db:seed            # Seed with real tournament data
+npm run db:seed:mock       # Seed with mock data (reliable for testing)
+npm run db:reset           # Delete all data and re-seed
+npm run sync               # Manual tournament sync from IBJJF/JJWL
 ```
 
 ### Git Worktrees
@@ -135,22 +148,15 @@ git worktree remove .worktrees/feature-name
 
 ### Current State
 - Email/password auth via Cognito: WORKING
-- Google OAuth: NOT CONFIGURED
+- Google OAuth via Cognito: WORKING (configured in SAM template)
 
-### Google OAuth Setup (TODO)
-1. **Google Cloud Console:**
-   - Project: (existing project with Maps API)
-   - Create OAuth 2.0 credentials (Web application)
-   - Authorized redirect URI: `https://{cognito-domain}.auth.us-east-1.amazoncognito.com/oauth2/idpresponse`
-   - Save Client ID and Client Secret
+### Google OAuth
+Google OAuth is configured via CloudFormation in `backend/template.yaml`. To deploy:
+1. Obtain Google OAuth credentials from Google Cloud Console
+2. Deploy with: `sam deploy --parameter-overrides GoogleClientSecret=YOUR_SECRET`
 
-2. **AWS Cognito:**
-   - Add User Pool Domain
-   - Add Google as Identity Provider
-   - Update UserPoolClient with OAuth settings
-
-3. **Frontend:**
-   - Update LoginModal to redirect to Cognito hosted UI
+### Dev Mode
+Set `NEXT_PUBLIC_DEV_MODE=true` in frontend to bypass Cognito for local testing. This allows login with any email/password combination.
 
 ## Key Stores (Zustand)
 
@@ -192,12 +198,16 @@ git worktree remove .worktrees/feature-name
 
 ### Frontend (Vercel)
 - Auto-deploys from `master` branch
-- Production URL: `https://bjj-tournament-frontend.vercel.app`
+- Production URLs:
+  - `https://bjjcomps.com` (custom domain)
+  - `https://bjj-tournament-frontend.vercel.app` (Vercel default)
 
 ### Backend (AWS SAM)
 ```bash
 cd backend
 sam build && sam deploy
+# For prod with Google OAuth:
+sam deploy --config-env prod --parameter-overrides GoogleClientSecret=YOUR_SECRET
 ```
 
 ## Design Decisions
