@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { QuickSetupForm } from '@/components/setup/QuickSetupForm';
 import { useAuthStore } from '@/stores/authStore';
 import { useSetupStore } from '@/stores/setupStore';
-import { fetchAthletes, createAthlete, type Athlete } from '@/lib/api';
+import { fetchAthletes, createAthlete } from '@/lib/api';
 
-export default function PlanSetupPage() {
+function PlanSetupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated, isLoading: authLoading, getAccessToken } = useAuthStore();
@@ -134,5 +134,21 @@ export default function PlanSetupPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function PlanSetupPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="container mx-auto px-4 py-16">
+          <div className="max-w-lg mx-auto pt-16 text-center">
+            <p className="opacity-60">Loading...</p>
+          </div>
+        </main>
+      }
+    >
+      <PlanSetupContent />
+    </Suspense>
   );
 }

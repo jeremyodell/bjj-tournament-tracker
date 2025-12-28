@@ -1,9 +1,10 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import type { Tournament } from '@/lib/types';
 import { useAuthStore } from '@/stores/authStore';
 import { useIsInWishlist, useWishlistMutations } from '@/hooks/useWishlist';
+import { LoginModal } from '@/components/auth/LoginModal';
 
 interface TournamentCardProps {
   tournament: Tournament;
@@ -11,7 +12,7 @@ interface TournamentCardProps {
 }
 
 export function TournamentCard({ tournament, index }: TournamentCardProps) {
-  const router = useRouter();
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
   const { isAuthenticated } = useAuthStore();
   const isInWishlist = useIsInWishlist(tournament.id);
   const { addMutation, removeMutation } = useWishlistMutations();
@@ -21,7 +22,7 @@ export function TournamentCard({ tournament, index }: TournamentCardProps) {
     e.stopPropagation();
 
     if (!isAuthenticated) {
-      router.push('/login');
+      setLoginModalOpen(true);
       return;
     }
 
@@ -285,6 +286,13 @@ export function TournamentCard({ tournament, index }: TournamentCardProps) {
           </div>
         </div>
       </div>
+
+      {/* Login Modal for unauthenticated users */}
+      <LoginModal
+        isOpen={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        context="favorite"
+      />
     </div>
   );
 }
