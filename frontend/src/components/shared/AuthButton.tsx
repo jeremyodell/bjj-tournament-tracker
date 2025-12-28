@@ -19,7 +19,7 @@ export function AuthButton() {
     return (
       <div className="flex items-center gap-4">
         <Link
-          href="/wishlist"
+          href="/plan"
           className="text-sm font-medium opacity-80 hover:opacity-100 transition-opacity"
         >
           My Season
