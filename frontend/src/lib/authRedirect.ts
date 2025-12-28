@@ -1,0 +1,44 @@
+import { useSetupStore } from '@/stores/setupStore';
+import { fetchAthletes, type Athlete } from '@/lib/api';
+
+export interface RedirectResult {
+  path: string;
+  athlete?: Athlete; // Set when auto-selecting single athlete
+}
+
+/**
+ * Determines where to redirect after successful login based on:
+ * - setupStore data (if user was filling out the planner)
+ * - Number of athletes the user has
+ */
+export async function getPostLoginRedirect(
+  accessToken: string
+): Promise<RedirectResult> {
+  const { isComplete } = useSetupStore.getState();
+
+  // If user has setupStore data, they were filling out the planner
+  // Send them to verify page to confirm and save their athlete
+  if (isComplete) {
+    return { path: '/plan/verify' };
+  }
+
+  // No setupStore data - check their athletes
+  try {
+    const data = await fetchAthletes(accessToken);
+    const athletes = data.athletes;
+
+    if (athletes.length === 0) {
+      // No athletes - go to plan setup
+      return { path: '/plan' };
+    } else if (athletes.length === 1) {
+      // Single athlete - auto-select and go to results
+      return { path: '/plan/results', athlete: athletes[0] };
+    } else {
+      // Multiple athletes - go to select page
+      return { path: '/plan/select' };
+    }
+  } catch {
+    // On error, fall back to plan
+    return { path: '/plan' };
+  }
+}

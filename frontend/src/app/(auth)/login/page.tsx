@@ -4,10 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
+import { useSetupStore } from '@/stores/setupStore';
+import { getPostLoginRedirect } from '@/lib/authRedirect';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading } = useAuthStore();
+  const { login, isLoading, getAccessToken } = useAuthStore();
+  const loadFromAthlete = useSetupStore((state) => state.loadFromAthlete);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -18,7 +21,23 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      router.push('/wishlist');
+
+      // Get access token for redirect logic
+      const token = await getAccessToken();
+      if (!token) {
+        router.push('/plan');
+        return;
+      }
+
+      // Determine smart redirect
+      const { path, athlete } = await getPostLoginRedirect(token);
+
+      // If auto-selecting single athlete, load it into store
+      if (athlete) {
+        loadFromAthlete(athlete);
+      }
+
+      router.push(path);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     }
