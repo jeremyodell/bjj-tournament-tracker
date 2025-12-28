@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
+import { signInWithGoogle } from '@/lib/auth';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -13,6 +15,18 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const handleGoogleSignup = async () => {
+    setError('');
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Google authentication failed');
+      setGoogleLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +67,18 @@ export default function RegisterPage() {
           {error}
         </div>
       )}
+
+      <GoogleSignInButton
+        onClick={handleGoogleSignup}
+        disabled={googleLoading || isLoading}
+        loading={googleLoading}
+      />
+
+      <div className="flex items-center gap-4 my-6">
+        <div className="flex-1 h-px bg-white/10" />
+        <span className="text-sm opacity-40">or</span>
+        <div className="flex-1 h-px bg-white/10" />
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
