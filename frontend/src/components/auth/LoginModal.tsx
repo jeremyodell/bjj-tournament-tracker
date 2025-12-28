@@ -1,6 +1,7 @@
 'use client';
 
 import { useSetupStore } from '@/stores/setupStore';
+import { useAuthStore } from '@/stores/authStore';
 import { signInWithGoogle } from '@/lib/auth';
 
 interface LoginModalProps {
@@ -11,8 +12,16 @@ interface LoginModalProps {
 
 export function LoginModal({ isOpen, onClose, context }: LoginModalProps) {
   const { athleteName } = useSetupStore();
+  const { isAuthenticated, checkAuth } = useAuthStore();
 
   if (!isOpen) return null;
+
+  // If already authenticated, close modal and refresh auth state
+  if (isAuthenticated) {
+    checkAuth();
+    onClose();
+    return null;
+  }
 
   const getTitle = () => {
     switch (context) {

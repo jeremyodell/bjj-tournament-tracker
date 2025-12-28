@@ -80,11 +80,48 @@ function setDevUser(user: AuthUser | null): void {
   }
 }
 
+// Key for storing the return path after OAuth
+const OAUTH_RETURN_PATH_KEY = 'oauth-return-path';
+
+export function saveReturnPath(): void {
+  if (typeof window === 'undefined') return;
+  const path = window.location.pathname + window.location.search;
+  // Don't save auth-related pages as return paths
+  if (!path.startsWith('/login') && !path.startsWith('/register')) {
+    sessionStorage.setItem(OAUTH_RETURN_PATH_KEY, path);
+    console.log('[Auth] Saved return path:', path);
+  }
+}
+
+export function getAndClearReturnPath(): string | null {
+  if (typeof window === 'undefined') return null;
+  const path = sessionStorage.getItem(OAUTH_RETURN_PATH_KEY);
+  if (path) {
+    sessionStorage.removeItem(OAUTH_RETURN_PATH_KEY);
+    console.log('[Auth] Retrieved return path:', path);
+  }
+  return path;
+}
+
 export async function signInWithGoogle(): Promise<void> {
   if (IS_DEV_MODE) {
     console.log('[DEV MODE] Google sign-in not available in dev mode');
     return;
   }
+
+  // Check if user is already authenticated
+  try {
+    const session = await fetchAuthSession();
+    if (session.tokens?.idToken) {
+      console.log('[Auth] signInWithGoogle: User already authenticated, skipping redirect');
+      return;
+    }
+  } catch {
+    // Not authenticated, continue with sign-in
+  }
+
+  // Save current path for redirect after OAuth
+  saveReturnPath();
 
   console.log('[Auth] signInWithGoogle: starting Google OAuth...');
   await signInWithRedirect({ provider: 'Google' });
