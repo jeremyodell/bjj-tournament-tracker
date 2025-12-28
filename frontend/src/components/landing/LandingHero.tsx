@@ -40,13 +40,13 @@ export function LandingHero() {
           <div className="pt-24 lg:pt-0 lg:pr-8 xl:pr-16">
             {/* Headline */}
             <h1
-              className="font-[family-name:var(--font-display)] text-5xl leading-[1.1] tracking-tight text-white sm:text-6xl md:text-7xl lg:text-[5.5rem] animate-hero-fade-in"
+              className="font-[family-name:var(--font-display)] text-4xl leading-[1.1] tracking-tight text-white sm:text-5xl md:text-6xl lg:text-[4.5rem] animate-hero-fade-in"
               style={{
                 animationDelay: '0.1s',
                 animationFillMode: 'both',
               }}
             >
-              Find your next
+              Plan Your Kid&apos;s
               <br />
               <span
                 className="relative inline-block"
@@ -58,7 +58,11 @@ export function LandingHero() {
                   backgroundClip: 'text',
                 }}
               >
-                competition
+                Tournament Season
+              </span>
+              <br />
+              <span className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] opacity-80">
+                in 60 Seconds
               </span>
             </h1>
 
@@ -70,9 +74,7 @@ export function LandingHero() {
                 animationFillMode: 'both',
               }}
             >
-              IBJJF and JJWL tournaments in one place.
-              <br className="hidden sm:block" />
-              Plan your season, budget smarter.
+              See every IBJJF & JJWL tournament that fits your athlete&apos;s division — no more spreadsheets.
             </p>
 
             {/* CTA Button - Gold gradient with glow */}
@@ -84,7 +86,7 @@ export function LandingHero() {
               }}
             >
               <Link
-                href="/tournaments"
+                href="/plan"
                 className="group relative inline-flex items-center justify-center overflow-hidden rounded-full px-8 py-4 text-base font-semibold transition-all duration-300 sm:px-10 sm:py-5 sm:text-lg w-full sm:w-auto"
                 style={{
                   background:
@@ -105,7 +107,7 @@ export function LandingHero() {
                   aria-hidden="true"
                 />
                 <span className="relative z-10 text-black">
-                  Browse Tournaments
+                  Start Planning
                 </span>
                 {/* Arrow icon */}
                 <svg
@@ -121,6 +123,21 @@ export function LandingHero() {
                     d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
                   />
                 </svg>
+              </Link>
+
+              {/* No account required text */}
+              <p
+                className="mt-4 text-sm text-white/50 text-center sm:text-left"
+              >
+                No account required
+              </p>
+
+              {/* Secondary CTA */}
+              <Link
+                href="/tournaments"
+                className="mt-4 inline-block text-sm text-white/60 hover:text-[#d4af37] transition-colors"
+              >
+                or Browse Tournaments →
               </Link>
             </div>
           </div>
