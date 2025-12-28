@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { Athlete } from '@/lib/api';
 
 interface AthleteInfo {
   athleteName?: string;
@@ -8,6 +9,9 @@ interface AthleteInfo {
 }
 
 interface SetupState {
+  // Athlete ID (set when loading from existing athlete)
+  athleteId: string | null;
+
   // Athlete info
   athleteName: string;
   age: number | null;
@@ -25,17 +29,19 @@ interface SetupState {
   // Actions
   setAthleteInfo: (info: AthleteInfo) => void;
   setLocation: (location: string, lat?: number, lng?: number) => void;
+  loadFromAthlete: (athlete: Athlete) => void;
   reset: () => void;
 }
 
 const initialState = {
+  athleteId: null as string | null,
   athleteName: '',
-  age: null,
+  age: null as number | null,
   belt: '',
   weight: '',
   location: '',
-  lat: null,
-  lng: null,
+  lat: null as number | null,
+  lng: null as number | null,
   isComplete: false,
 };
 
@@ -65,6 +71,26 @@ export const useSetupStore = create<SetupState>((set, get) => ({
         location,
         lat: lat ?? state.lat,
         lng: lng ?? state.lng,
+      };
+      return {
+        ...newState,
+        isComplete: isSetupComplete(newState),
+      };
+    });
+  },
+
+  loadFromAthlete: (athlete) => {
+    set((state) => {
+      const currentYear = new Date().getFullYear();
+      const age = athlete.birthYear ? currentYear - athlete.birthYear : null;
+
+      const newState = {
+        ...state,
+        athleteId: athlete.athleteId,
+        athleteName: athlete.name,
+        age,
+        belt: athlete.beltRank ?? '',
+        weight: athlete.weightClass ?? '',
       };
       return {
         ...newState,
