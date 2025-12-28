@@ -3,20 +3,27 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSetupStore } from '@/stores/setupStore';
+import { useAuthStore } from '@/stores/authStore';
 import { FreePlannerView } from '@/components/plan/FreePlannerView';
 
 export default function PlanResultsPage() {
   const router = useRouter();
-  const { isComplete } = useSetupStore();
+  const { isComplete, athleteId } = useSetupStore();
+  const { isAuthenticated } = useAuthStore();
 
-  // Redirect to setup if not complete
+  // Determine if user can view results:
+  // - Anonymous users: need isComplete (filled out form)
+  // - Authenticated users: need athleteId (selected an athlete)
+  const canViewResults = isAuthenticated ? !!athleteId : isComplete;
+
+  // Redirect to setup if not authorized
   useEffect(() => {
-    if (!isComplete) {
+    if (!canViewResults) {
       router.replace('/plan');
     }
-  }, [isComplete, router]);
+  }, [canViewResults, router]);
 
-  if (!isComplete) {
+  if (!canViewResults) {
     return null;
   }
 
