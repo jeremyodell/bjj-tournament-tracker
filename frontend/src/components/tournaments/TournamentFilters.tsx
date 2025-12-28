@@ -208,7 +208,7 @@ export function TournamentFilters() {
               onClick={() => setOrg(filters.org === 'JJWL' ? undefined : 'JJWL')}
               className={
                 filters.org === 'JJWL'
-                  ? 'bg-[#00F0FF]/20 text-[#00F0FF] border-[#00F0FF]/30 hover:bg-[#00F0FF]/30'
+                  ? 'bg-[#FF2D6A]/20 text-[#FF2D6A] border-[#FF2D6A]/30 hover:bg-[#FF2D6A]/30'
                   : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10'
               }
             >

@@ -30,8 +30,10 @@ export function WishlistCard({ item }: WishlistCardProps) {
     <div
       className="p-4 rounded-xl border flex items-center justify-between gap-4"
       style={{
-        background: 'rgba(255, 255, 255, 0.03)',
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        background: 'var(--glass-bg)',
+        borderColor: 'var(--glass-border)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
       }}
     >
       <div className="flex-1 min-w-0">

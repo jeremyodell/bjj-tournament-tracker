@@ -45,13 +45,14 @@ export default function ProfilePage() {
           <h2 className="text-2xl font-semibold">My Athletes</h2>
           <button
             onClick={handleAddAthlete}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:scale-105"
+            className="flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105"
             style={{
-              background: 'linear-gradient(135deg, #d4af37 0%, #c9a227 100%)',
+              background: 'linear-gradient(135deg, #d4af37 0%, #c9a227 50%, #b8962a 100%)',
               color: '#000',
+              boxShadow: '0 0 30px rgba(212, 175, 55, 0.25), 0 0 60px rgba(212, 175, 55, 0.1)',
             }}
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
             Add Athlete
@@ -84,8 +85,10 @@ export default function ProfilePage() {
               <div
                 className="p-8 rounded-xl border text-center"
                 style={{
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                  background: 'var(--glass-bg)',
+                  borderColor: 'var(--glass-border)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
                 }}
               >
                 <div className="mb-4">
@@ -109,13 +112,14 @@ export default function ProfilePage() {
                 </p>
                 <button
                   onClick={handleAddAthlete}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all hover:scale-105"
+                  className="inline-flex items-center gap-2 px-8 py-4 rounded-full font-semibold transition-all duration-300 hover:scale-105"
                   style={{
-                    background: 'linear-gradient(135deg, #d4af37 0%, #c9a227 100%)',
+                    background: 'linear-gradient(135deg, #d4af37 0%, #c9a227 50%, #b8962a 100%)',
                     color: '#000',
+                    boxShadow: '0 0 40px rgba(212, 175, 55, 0.3), 0 0 80px rgba(212, 175, 55, 0.15)',
                   }}
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                   </svg>
                   Add Your First Athlete

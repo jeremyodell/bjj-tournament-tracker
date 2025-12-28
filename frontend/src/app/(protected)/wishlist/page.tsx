@@ -41,13 +41,17 @@ export default function WishlistPage() {
           <p className="text-xl opacity-60 mb-4">No tournaments saved yet</p>
           <Link
             href="/tournaments"
-            className="inline-flex px-6 py-3 rounded-lg font-semibold transition-all hover:scale-105"
+            className="inline-flex items-center gap-2 px-8 py-4 rounded-full font-semibold transition-all duration-300 hover:scale-105"
             style={{
-              background: 'linear-gradient(135deg, #d4af37 0%, #c9a227 100%)',
+              background: 'linear-gradient(135deg, #d4af37 0%, #c9a227 50%, #b8962a 100%)',
               color: '#000',
+              boxShadow: '0 0 40px rgba(212, 175, 55, 0.3), 0 0 80px rgba(212, 175, 55, 0.15)',
             }}
           >
             Browse Tournaments
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+            </svg>
           </Link>
         </div>
       ) : (
@@ -68,13 +72,17 @@ export default function WishlistPage() {
           <p className="mb-3 opacity-80">Ready to plan your season?</p>
           <Link
             href="/profile"
-            className="inline-flex px-6 py-3 rounded-lg font-semibold transition-all hover:scale-105"
+            className="inline-flex items-center gap-2 px-8 py-4 rounded-full font-semibold transition-all duration-300 hover:scale-105"
             style={{
-              background: 'linear-gradient(135deg, #d4af37 0%, #c9a227 100%)',
+              background: 'linear-gradient(135deg, #d4af37 0%, #c9a227 50%, #b8962a 100%)',
               color: '#000',
+              boxShadow: '0 0 40px rgba(212, 175, 55, 0.3), 0 0 80px rgba(212, 175, 55, 0.15)',
             }}
           >
             Add Athletes to Get Started
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+            </svg>
           </Link>
         </div>
       )}

@@ -38,10 +38,11 @@ export function AuthButton() {
   return (
     <Link
       href="/login"
-      className="px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 hover:scale-105"
+      className="px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 hover:scale-105"
       style={{
-        background: 'linear-gradient(135deg, #d4af37 0%, #c9a227 100%)',
+        background: 'linear-gradient(135deg, #d4af37 0%, #c9a227 50%, #b8962a 100%)',
         color: '#000',
+        boxShadow: '0 0 20px rgba(212, 175, 55, 0.2), 0 0 40px rgba(212, 175, 55, 0.1)',
       }}
     >
       Sign In

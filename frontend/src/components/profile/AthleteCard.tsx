@@ -34,8 +34,10 @@ export function AthleteCard({ athlete, onEdit }: AthleteCardProps) {
     <div
       className="p-4 rounded-xl border flex items-center justify-between gap-4"
       style={{
-        background: 'rgba(255, 255, 255, 0.03)',
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        background: 'var(--glass-bg)',
+        borderColor: 'var(--glass-border)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
       }}
     >
       <div className="flex items-center gap-4">
@@ -66,10 +68,11 @@ export function AthleteCard({ athlete, onEdit }: AthleteCardProps) {
         {/* View Season Plan button */}
         <Link
           href={`/planner/${athlete.athleteId}`}
-          className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 hover:scale-105"
+          className="px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 hover:scale-105"
           style={{
-            background: 'linear-gradient(135deg, #d4af37 0%, #c9a227 100%)',
+            background: 'linear-gradient(135deg, #d4af37 0%, #c9a227 50%, #b8962a 100%)',
             color: '#000',
+            boxShadow: '0 0 20px rgba(212, 175, 55, 0.2), 0 0 40px rgba(212, 175, 55, 0.1)',
           }}
         >
           View Season Plan
