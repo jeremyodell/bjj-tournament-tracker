@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTournaments } from '@/hooks/useTournaments';
 import { useSetupStore } from '@/stores/setupStore';
+import { useAuthStore } from '@/stores/authStore';
 import { PlannerHeader } from './PlannerHeader';
 import { TournamentCard } from '@/components/tournaments/TournamentCard';
 import { TournamentCardSkeleton } from '@/components/tournaments/TournamentCardSkeleton';
@@ -17,7 +18,8 @@ export function FreePlannerView() {
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [loginContext, setLoginContext] = useState<LoginContext>('save');
-  const { athleteName } = useSetupStore();
+  const { athleteName, athleteId } = useSetupStore();
+  const { isAuthenticated } = useAuthStore();
 
   // Fetch kids tournaments
   const { data, isLoading, error } = useTournaments({ kids: true });
@@ -34,9 +36,18 @@ export function FreePlannerView() {
   });
 
   const handleSave = () => {
-    setLoginContext('save');
-    setLoginModalOpen(true);
+    if (isAuthenticated) {
+      // Authenticated users: go to wishlist to see saved tournaments
+      router.push('/wishlist');
+    } else {
+      // Anonymous users: show login modal
+      setLoginContext('save');
+      setLoginModalOpen(true);
+    }
   };
+
+  // Determine if this is a saved athlete (authenticated with athleteId)
+  const isSaved = isAuthenticated && !!athleteId;
 
   const handleEdit = () => {
     router.push('/plan');
@@ -56,7 +67,7 @@ export function FreePlannerView() {
 
   return (
     <div className="container mx-auto px-4 py-8 pt-24">
-      <PlannerHeader onSave={handleSave} onEdit={handleEdit} />
+      <PlannerHeader onSave={handleSave} onEdit={handleEdit} isSaved={isSaved} />
 
       {/* Tournament count and filters */}
       <div className="mb-6">
