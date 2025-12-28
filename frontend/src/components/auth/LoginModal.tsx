@@ -35,8 +35,9 @@ export function LoginModal({ isOpen, onClose, context }: LoginModalProps) {
   };
 
   const handleGoogleLogin = () => {
-    // TODO: Implement Google OAuth
-    window.location.href = '/api/auth/google';
+    // TODO: Implement Google OAuth with Cognito
+    // For now, redirect to email registration
+    window.location.href = '/register';
   };
 
   const handleEmailLogin = () => {

@@ -120,11 +120,15 @@ export default function VerifyPage() {
                 id="age"
                 value={age ?? ''}
                 onChange={(e) => setAthleteInfo({ age: e.target.value ? parseInt(e.target.value) : null })}
-                className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 focus:border-[#d4af37] focus:outline-none"
+                className="w-full px-4 py-3 rounded-lg border border-white/20 focus:border-[#d4af37] focus:outline-none text-white cursor-pointer"
+                style={{
+                  backgroundColor: 'rgba(39, 39, 42, 0.95)',
+                  colorScheme: 'dark',
+                }}
               >
-                <option value="">--</option>
+                <option value="" className="bg-zinc-800 text-zinc-400">--</option>
                 {AGE_OPTIONS.map((a) => (
-                  <option key={a} value={a}>{a}</option>
+                  <option key={a} value={a} className="bg-zinc-800 text-white">{a}</option>
                 ))}
               </select>
             </div>
@@ -137,11 +141,15 @@ export default function VerifyPage() {
                 id="belt"
                 value={belt}
                 onChange={(e) => setAthleteInfo({ belt: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 focus:border-[#d4af37] focus:outline-none capitalize"
+                className="w-full px-4 py-3 rounded-lg border border-white/20 focus:border-[#d4af37] focus:outline-none capitalize text-white cursor-pointer"
+                style={{
+                  backgroundColor: 'rgba(39, 39, 42, 0.95)',
+                  colorScheme: 'dark',
+                }}
               >
-                <option value="">--</option>
+                <option value="" className="bg-zinc-800 text-zinc-400">--</option>
                 {BELT_OPTIONS.map((b) => (
-                  <option key={b} value={b} className="capitalize">{b}</option>
+                  <option key={b} value={b} className="bg-zinc-800 text-white capitalize">{b}</option>
                 ))}
               </select>
             </div>
@@ -154,11 +162,15 @@ export default function VerifyPage() {
                 id="weight"
                 value={weight}
                 onChange={(e) => setAthleteInfo({ weight: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 focus:border-[#d4af37] focus:outline-none"
+                className="w-full px-4 py-3 rounded-lg border border-white/20 focus:border-[#d4af37] focus:outline-none text-white cursor-pointer"
+                style={{
+                  backgroundColor: 'rgba(39, 39, 42, 0.95)',
+                  colorScheme: 'dark',
+                }}
               >
-                <option value="">--</option>
+                <option value="" className="bg-zinc-800 text-zinc-400">--</option>
                 {WEIGHT_OPTIONS.map((w) => (
-                  <option key={w} value={w}>{w}</option>
+                  <option key={w} value={w} className="bg-zinc-800 text-white">{w}</option>
                 ))}
               </select>
             </div>

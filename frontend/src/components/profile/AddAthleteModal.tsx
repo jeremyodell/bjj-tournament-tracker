@@ -124,11 +124,15 @@ function AddAthleteModalContent({ onClose, editingAthlete }: AddAthleteModalCont
             <select
               value={beltRank}
               onChange={(e) => setBeltRank(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 focus:border-[#d4af37] focus:outline-none transition-colors appearance-none cursor-pointer"
+              className="w-full px-4 py-3 rounded-lg border border-white/10 focus:border-[#d4af37] focus:outline-none transition-colors cursor-pointer text-white"
+              style={{
+                backgroundColor: 'rgba(39, 39, 42, 0.95)',
+                colorScheme: 'dark',
+              }}
             >
-              <option value="">Select belt rank</option>
+              <option value="" className="bg-zinc-800 text-zinc-400">Select belt rank</option>
               {beltRanks.map((belt) => (
-                <option key={belt} value={belt.toLowerCase()}>
+                <option key={belt} value={belt.toLowerCase()} className="bg-zinc-800 text-white">
                   {belt}
                 </option>
               ))}
