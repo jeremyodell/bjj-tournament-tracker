@@ -43,8 +43,16 @@ export function LandingNav() {
           </span>
         </Link>
 
-        {/* Right side: Browse Tournaments + Auth */}
+        {/* Right side: My Season + Browse Tournaments + Auth */}
         <div className="flex items-center gap-4">
+          {/* My Season Link */}
+          <Link
+            href="/plan"
+            className="text-white/70 hover:text-[#d4af37] transition-colors duration-300 text-sm font-medium hidden sm:block"
+          >
+            My Season
+          </Link>
+
           {/* Browse Tournaments Button - min-h-[44px] for touch target */}
           <Button
             asChild

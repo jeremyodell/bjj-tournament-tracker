@@ -21,7 +21,7 @@ export function AppHeader() {
 
   const navLinks = [
     { href: '/tournaments', label: 'Browse' },
-    { href: '/wishlist', label: 'My Season' },
+    { href: '/plan', label: 'My Season' },
     { href: '/profile', label: 'Profile' },
   ];
 
