@@ -7,12 +7,16 @@ import { useSetupStore } from '@/stores/setupStore';
 import { PlannerHeader } from './PlannerHeader';
 import { TournamentCard } from '@/components/tournaments/TournamentCard';
 import { TournamentCardSkeleton } from '@/components/tournaments/TournamentCardSkeleton';
+import { LoginModal } from '@/components/auth/LoginModal';
 
 type FilterTab = 'all' | 'nearby' | 'ibjjf' | 'jjwl';
+type LoginContext = 'save' | 'favorite' | 'upgrade';
 
 export function FreePlannerView() {
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [loginContext, setLoginContext] = useState<LoginContext>('save');
   const { athleteName } = useSetupStore();
 
   // Fetch kids tournaments
@@ -30,8 +34,8 @@ export function FreePlannerView() {
   });
 
   const handleSave = () => {
-    // Trigger login flow
-    router.push('/login?redirect=/plan/results');
+    setLoginContext('save');
+    setLoginModalOpen(true);
   };
 
   const handleEdit = () => {
@@ -39,7 +43,8 @@ export function FreePlannerView() {
   };
 
   const handleUpgrade = () => {
-    router.push('/login?redirect=/plan/results&upgrade=true');
+    setLoginContext('upgrade');
+    setLoginModalOpen(true);
   };
 
   const filterTabs: { key: FilterTab; label: string }[] = [
@@ -128,6 +133,13 @@ export function FreePlannerView() {
           Try It
         </button>
       </div>
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        context={loginContext}
+      />
     </div>
   );
 }
