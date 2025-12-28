@@ -24,6 +24,16 @@ Parameters:
       - prod
     Description: Deployment stage
 
+  GoogleClientId:
+    Type: String
+    Default: '826897719696-rvn6vpsk46fpn75evco302esr5fq7r16.apps.googleusercontent.com'
+    Description: Google OAuth Client ID
+
+  GoogleClientSecret:
+    Type: String
+    NoEcho: true
+    Description: Google OAuth Client Secret
+
   EnableScheduledSync:
     Type: String
     Default: 'false'
@@ -107,8 +117,32 @@ Resources:
         Project: bjj-tournament-tracker
         Environment: !Ref Stage
 
+  # Cognito Domain for OAuth flows (hosted UI)
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub bjj-tournament-tracker-${Stage}
+      UserPoolId: !Ref UserPool
+
+  # Google Identity Provider
+  GoogleIdentityProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Properties:
+      UserPoolId: !Ref UserPool
+      ProviderName: Google
+      ProviderType: Google
+      ProviderDetails:
+        client_id: !Ref GoogleClientId
+        client_secret: !Ref GoogleClientSecret
+        authorize_scopes: 'email profile openid'
+      AttributeMapping:
+        email: email
+        name: name
+        username: sub
+
   UserPoolClient:
     Type: AWS::Cognito::UserPoolClient
+    DependsOn: GoogleIdentityProvider
     Properties:
       ClientName: !Sub bjj-tournament-tracker-web-${Stage}
       UserPoolId: !Ref UserPool
@@ -120,16 +154,24 @@ Resources:
       PreventUserExistenceErrors: ENABLED
       SupportedIdentityProviders:
         - COGNITO
+        - Google
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
       CallbackURLs:
-        - !If
-          - IsProd
-          - https://bjj-tournament-frontend.vercel.app
-          - http://localhost:3000
+        - http://localhost:3000
+        - https://bjj-tournament-frontend.vercel.app
+        - https://bjjcomps.com
+        - https://www.bjjcomps.com
       LogoutURLs:
-        - !If
-          - IsProd
-          - https://bjj-tournament-frontend.vercel.app
-          - http://localhost:3000
+        - http://localhost:3000
+        - https://bjj-tournament-frontend.vercel.app
+        - https://bjjcomps.com
+        - https://www.bjjcomps.com
 
   # ============================================
   # API Gateway
@@ -442,3 +484,9 @@ Outputs:
   UserPoolArn:
     Description: Cognito User Pool ARN
     Value: !GetAtt UserPool.Arn
+
+  CognitoDomain:
+    Description: Cognito Hosted UI Domain
+    Value: !Sub https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com
+    Export:
+      Name: !Sub ${AWS::StackName}-CognitoDomain

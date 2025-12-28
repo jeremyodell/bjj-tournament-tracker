@@ -1,5 +1,5 @@
 import { Amplify } from 'aws-amplify';
-import { signIn, signUp, signOut, getCurrentUser, fetchAuthSession, confirmSignUp, resendSignUpCode } from '@aws-amplify/auth';
+import { signIn, signUp, signOut, getCurrentUser, fetchAuthSession, confirmSignUp, resendSignUpCode, signInWithRedirect } from '@aws-amplify/auth';
 
 // Helper to add timeout to async operations
 function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> {
@@ -20,6 +20,7 @@ const DEV_USER_KEY = 'dev-auth-user';
 // Configure Amplify - values come from environment (skip in dev mode)
 const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
 const userPoolClientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
+const cognitoDomain = process.env.NEXT_PUBLIC_COGNITO_DOMAIN;
 
 // Only configure on client side
 if (typeof window !== 'undefined') {
@@ -28,15 +29,28 @@ if (typeof window !== 'undefined') {
     IS_DEV_MODE,
     hasUserPoolId: !!userPoolId,
     hasClientId: !!userPoolClientId,
+    hasCognitoDomain: !!cognitoDomain,
     userPoolId: userPoolId ? userPoolId.substring(0, 10) + '...' : 'NOT SET',
   });
 
   if (!IS_DEV_MODE && userPoolId && userPoolClientId) {
+    const redirectUrl = window.location.origin;
+
     Amplify.configure({
       Auth: {
         Cognito: {
           userPoolId,
           userPoolClientId,
+          loginWith: cognitoDomain ? {
+            oauth: {
+              domain: cognitoDomain,
+              scopes: ['email', 'openid', 'profile'],
+              redirectSignIn: [redirectUrl],
+              redirectSignOut: [redirectUrl],
+              responseType: 'code',
+              providers: ['Google'],
+            }
+          } : undefined,
         }
       }
     });
@@ -64,6 +78,16 @@ function setDevUser(user: AuthUser | null): void {
   } else {
     localStorage.removeItem(DEV_USER_KEY);
   }
+}
+
+export async function signInWithGoogle(): Promise<void> {
+  if (IS_DEV_MODE) {
+    console.log('[DEV MODE] Google sign-in not available in dev mode');
+    return;
+  }
+
+  console.log('[Auth] signInWithGoogle: starting Google OAuth...');
+  await signInWithRedirect({ provider: 'Google' });
 }
 
 export async function login(email: string, password: string): Promise<AuthUser> {

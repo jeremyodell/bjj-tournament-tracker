@@ -1,6 +1,7 @@
 'use client';
 
 import { useSetupStore } from '@/stores/setupStore';
+import { signInWithGoogle } from '@/lib/auth';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -34,10 +35,12 @@ export function LoginModal({ isOpen, onClose, context }: LoginModalProps) {
     }
   };
 
-  const handleGoogleLogin = () => {
-    // TODO: Implement Google OAuth with Cognito
-    // For now, redirect to email registration
-    window.location.href = '/register';
+  const handleGoogleLogin = async () => {
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      console.error('Google sign-in error:', error);
+    }
   };
 
   const handleEmailLogin = () => {
