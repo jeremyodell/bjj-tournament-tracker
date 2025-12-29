@@ -14,6 +14,22 @@ export default function WishlistPage() {
   const { data, isLoading, error } = useWishlist();
   const { data: tournamentsData, isLoading: tournamentsLoading } = useTournaments();
 
+  const wishlist = data?.wishlist || [];
+
+  // Get IDs of tournaments already in wishlist (must be before early returns)
+  const wishlistTournamentIds = useMemo(() => {
+    return new Set(wishlist.map(item => item.tournamentPK));
+  }, [wishlist]);
+
+  // Get suggested tournaments (not in wishlist, limited to SUGGESTIONS_LIMIT)
+  const suggestedTournaments = useMemo(() => {
+    if (!tournamentsData?.pages) return [];
+
+    const allTournaments = tournamentsData.pages.flatMap(page => page.tournaments);
+    const filtered = allTournaments.filter(t => !wishlistTournamentIds.has(t.id));
+    return filtered.slice(0, SUGGESTIONS_LIMIT);
+  }, [tournamentsData, wishlistTournamentIds]);
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -35,22 +51,6 @@ export default function WishlistPage() {
       </div>
     );
   }
-
-  const wishlist = data?.wishlist || [];
-
-  // Get IDs of tournaments already in wishlist
-  const wishlistTournamentIds = useMemo(() => {
-    return new Set(wishlist.map(item => item.tournamentPK));
-  }, [wishlist]);
-
-  // Get suggested tournaments (not in wishlist, limited to SUGGESTIONS_LIMIT)
-  const suggestedTournaments = useMemo(() => {
-    if (!tournamentsData?.pages) return [];
-
-    const allTournaments = tournamentsData.pages.flatMap(page => page.tournaments);
-    const filtered = allTournaments.filter(t => !wishlistTournamentIds.has(t.id));
-    return filtered.slice(0, SUGGESTIONS_LIMIT);
-  }, [tournamentsData, wishlistTournamentIds]);
 
   return (
     <div className="container mx-auto px-4 py-8">
