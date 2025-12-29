@@ -37,13 +37,13 @@ export default function WishlistPage() {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">My Season</h1>
         <Link
-          href="/plan"
+          href="/tournaments"
           className="flex items-center gap-2 text-sm font-medium opacity-80 hover:opacity-100 transition-opacity"
         >
+          Find More Tournaments
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
           </svg>
-          Back to My Season
         </Link>
       </div>
 
