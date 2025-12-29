@@ -104,8 +104,8 @@ describe('SelectPage', () => {
     expect(state.athleteId).toBe('athlete-1');
     expect(state.athleteName).toBe('Sofia');
 
-    // Should redirect to results
-    expect(mockPush).toHaveBeenCalledWith('/plan/results');
+    // Should redirect to wishlist
+    expect(mockPush).toHaveBeenCalledWith('/wishlist');
   });
 
   it('navigates to /plan when add new athlete is clicked', async () => {

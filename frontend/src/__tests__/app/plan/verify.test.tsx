@@ -89,7 +89,7 @@ describe('VerifyPage', () => {
       });
 
       await waitFor(() => {
-        expect(mockPush).toHaveBeenCalledWith('/plan/results');
+        expect(mockPush).toHaveBeenCalledWith('/wishlist');
       });
     });
 

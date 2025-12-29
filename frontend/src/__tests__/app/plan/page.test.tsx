@@ -90,10 +90,10 @@ describe('PlanPage', () => {
       });
     });
 
-    it('redirects to /plan/results after auto-selecting', async () => {
+    it('redirects to /wishlist after auto-selecting', async () => {
       render(<PlanPage />);
       await waitFor(() => {
-        expect(mockReplace).toHaveBeenCalledWith('/plan/results');
+        expect(mockReplace).toHaveBeenCalledWith('/wishlist');
       }, { timeout: 3000 });
     });
 

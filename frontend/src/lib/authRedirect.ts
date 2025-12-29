@@ -31,8 +31,8 @@ export async function getPostLoginRedirect(
       // No athletes - go to plan setup
       return { path: '/plan' };
     } else if (athletes.length === 1) {
-      // Single athlete - auto-select and go to results
-      return { path: '/plan/results', athlete: athletes[0] };
+      // Single athlete - auto-select and go to wishlist
+      return { path: '/wishlist', athlete: athletes[0] };
     } else {
       // Multiple athletes - go to select page
       return { path: '/plan/select' };
