@@ -59,9 +59,9 @@ export default function VerifyPage() {
         weight: weight ? parseInt(weight) : undefined,
       });
 
-      // Clear store and redirect
+      // Clear store and redirect to My Season
       reset();
-      router.push('/plan/results');
+      router.push('/wishlist');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save athlete');
       setIsSubmitting(false);

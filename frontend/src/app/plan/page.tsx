@@ -54,9 +54,9 @@ function PlanSetupContent() {
           // No athletes - show setup form
           setShowForm(true);
         } else if (athletes.length === 1) {
-          // Single athlete - auto-select and go to results
+          // Single athlete - auto-select and go to My Season
           loadFromAthlete(athletes[0]);
-          router.replace('/plan/results');
+          router.replace('/wishlist');
           return;
         } else {
           // Multiple athletes - go to select page
@@ -104,7 +104,7 @@ function PlanSetupContent() {
       setIsCreatingAthlete(false);
     }
 
-    router.push('/plan/results');
+    router.push('/wishlist');
   };
 
   // Show loading while checking auth or athletes
