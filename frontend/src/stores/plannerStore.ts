@@ -21,11 +21,20 @@ export interface PlannedTournament {
   isLocked: boolean;
 }
 
+// Per-athlete state that gets saved/restored when switching athletes
+export interface AthleteState {
+  config: PlannerConfig;
+  plan: PlannedTournament[];
+  hasCompletedWizard: boolean;
+}
+
 interface PlannerState {
   athleteId: string | null;
   config: PlannerConfig;
   plan: PlannedTournament[];
   isGenerating: boolean;
+  hasCompletedWizard: boolean;
+  athleteStates: Record<string, AthleteState>; // cached state per athlete
 
   // Actions
   setAthleteId: (athleteId: string) => void;
@@ -36,6 +45,7 @@ interface PlannerState {
   lockTournament: (tournamentId: string) => void;
   removeTournament: (tournamentId: string) => void;
   setIsGenerating: (isGenerating: boolean) => void;
+  markWizardComplete: () => void;
   reset: () => void;
 }
 
@@ -49,15 +59,47 @@ const defaultConfig: PlannerConfig = {
   mustGoTournaments: [],
 };
 
+const defaultAthleteState: AthleteState = {
+  config: defaultConfig,
+  plan: [],
+  hasCompletedWizard: false,
+};
+
 export const usePlannerStore = create<PlannerState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       athleteId: null,
       config: defaultConfig,
       plan: [],
       isGenerating: false,
+      hasCompletedWizard: false,
+      athleteStates: {},
 
-      setAthleteId: (athleteId) => set({ athleteId }),
+      setAthleteId: (athleteId) => {
+        const state = get();
+        const currentAthleteId = state.athleteId;
+
+        // Save current athlete's state before switching (if there is one)
+        let updatedAthleteStates = { ...state.athleteStates };
+        if (currentAthleteId) {
+          updatedAthleteStates[currentAthleteId] = {
+            config: state.config,
+            plan: state.plan,
+            hasCompletedWizard: state.hasCompletedWizard,
+          };
+        }
+
+        // Load new athlete's state (or defaults)
+        const newAthleteState = updatedAthleteStates[athleteId] || defaultAthleteState;
+
+        set({
+          athleteId,
+          config: newAthleteState.config,
+          plan: newAthleteState.plan,
+          hasCompletedWizard: newAthleteState.hasCompletedWizard,
+          athleteStates: updatedAthleteStates,
+        });
+      },
 
       updateConfig: (updates) => set((state) => ({
         config: { ...state.config, ...updates },
@@ -99,13 +141,25 @@ export const usePlannerStore = create<PlannerState>()(
 
       setIsGenerating: (isGenerating) => set({ isGenerating }),
 
-      reset: () => set({ config: defaultConfig, plan: [], athleteId: null, isGenerating: false }),
+      markWizardComplete: () => set({ hasCompletedWizard: true }),
+
+      reset: () => set({
+        config: defaultConfig,
+        plan: [],
+        athleteId: null,
+        isGenerating: false,
+        hasCompletedWizard: false,
+        athleteStates: {},
+      }),
     }),
     {
       name: 'planner-storage',
       partialize: (state) => ({
         athleteId: state.athleteId,
         config: state.config,
+        plan: state.plan,
+        hasCompletedWizard: state.hasCompletedWizard,
+        athleteStates: state.athleteStates,
       }),
     }
   )
