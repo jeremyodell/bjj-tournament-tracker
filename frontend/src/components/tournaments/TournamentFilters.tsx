@@ -74,7 +74,7 @@ export function TournamentFilters() {
     filters.nogi ||
     filters.kids ||
     hasLocation ||
-    filters.datePreset !== '30';
+    filters.datePreset !== 'year';
 
   return (
     <div className="space-y-4 p-6 bg-[var(--glass-bg)] backdrop-blur-xl border border-[var(--glass-border)] rounded-2xl">

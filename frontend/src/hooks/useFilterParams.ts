@@ -54,7 +54,7 @@ export function useFilterParams() {
   const pathname = usePathname();
 
   const state = useMemo((): FilterState => {
-    const datePreset = (searchParams.get('date') as DatePreset) || '30';
+    const datePreset = (searchParams.get('date') as DatePreset) || 'year';
     const distancePreset = searchParams.get('d')
       ? (parseInt(searchParams.get('d')!) as DistancePreset)
       : 'any';

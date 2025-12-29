@@ -81,7 +81,7 @@ export function TournamentList() {
       filters.kids ||
       filters.lat ||
       filters.radiusMiles ||
-      filters.datePreset !== '30';
+      filters.datePreset !== 'year';
 
     return (
       <EmptyState
