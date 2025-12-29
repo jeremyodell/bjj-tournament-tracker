@@ -82,7 +82,7 @@ export function TournamentCard({ tournament, index }: TournamentCardProps) {
         animationDelay: `${(index || 0) * 100}ms`,
       }}
     >
-      {/* Heart/Wishlist Button */}
+      {/* Heart/Season Button */}
       <button
         onClick={handleHeartClick}
         disabled={isLoading}
@@ -91,7 +91,7 @@ export function TournamentCard({ tournament, index }: TournamentCardProps) {
           background: 'rgba(0, 0, 0, 0.3)',
           backdropFilter: 'blur(8px)',
         }}
-        aria-label={isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+        aria-label={isInWishlist ? 'Remove from season' : 'Add to season'}
       >
         <svg
           className="w-5 h-5 transition-all duration-300"

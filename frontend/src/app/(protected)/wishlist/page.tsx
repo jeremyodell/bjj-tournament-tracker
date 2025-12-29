@@ -11,7 +11,7 @@ export default function WishlistPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">My Wishlist</h1>
+        <h1 className="text-3xl font-bold mb-8">My Season</h1>
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="h-24 rounded-xl bg-white/5 animate-pulse" />
@@ -24,8 +24,8 @@ export default function WishlistPage() {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">My Wishlist</h1>
-        <div className="text-red-400">Error loading wishlist</div>
+        <h1 className="text-3xl font-bold mb-8">My Season</h1>
+        <div className="text-red-400">Error loading season</div>
       </div>
     );
   }
@@ -35,7 +35,7 @@ export default function WishlistPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Saved Tournaments</h1>
+        <h1 className="text-3xl font-bold">My Season</h1>
         <Link
           href="/plan"
           className="flex items-center gap-2 text-sm font-medium opacity-80 hover:opacity-100 transition-opacity"
