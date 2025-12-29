@@ -197,7 +197,8 @@ Set `NEXT_PUBLIC_DEV_MODE=true` in frontend to bypass Cognito for local testing.
 ## Deployment
 
 ### Frontend (Vercel)
-- Auto-deploys from `master` branch
+- **Auto-deploys on push to `master`** - just `git push`, no manual deploy needed
+- Do NOT use `vercel` CLI for deployments - CI/CD handles it
 - Production URLs:
   - `https://bjjcomps.com` (custom domain)
   - `https://bjj-tournament-frontend.vercel.app` (Vercel default)
