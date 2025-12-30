@@ -4,6 +4,7 @@ import {
   getKnownAirport,
   listKnownAirports,
   incrementAirportUserCount,
+  decrementAirportUserCount,
   updateAirportLastFetched,
 } from '../../db/airportQueries.js';
 import { docClient } from '../../db/client.js';
@@ -102,6 +103,34 @@ describe('airportQueries', () => {
       expect(input.Key.SK).toBe('META');
       expect(input.UpdateExpression).toContain('userCount = userCount + :inc');
       expect(input.ExpressionAttributeValues[':inc']).toBe(1);
+    });
+  });
+
+  describe('decrementAirportUserCount', () => {
+    it('should decrement user count by 1 with conditional check', async () => {
+      mockSend.mockResolvedValueOnce({} as never);
+
+      await decrementAirportUserCount('DFW');
+
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const input = mockSend.mock.calls[0][0].input as any;
+      expect(input.Key.PK).toBe('AIRPORT#DFW');
+      expect(input.Key.SK).toBe('META');
+      expect(input.UpdateExpression).toContain('userCount = userCount - :dec');
+      expect(input.ConditionExpression).toContain('userCount > :zero');
+      expect(input.ExpressionAttributeValues[':dec']).toBe(1);
+      expect(input.ExpressionAttributeValues[':zero']).toBe(0);
+    });
+
+    it('should throw when user count is zero', async () => {
+      const conditionalError = new Error('ConditionalCheckFailed');
+      conditionalError.name = 'ConditionalCheckFailedException';
+      mockSend.mockRejectedValueOnce(conditionalError as never);
+
+      await expect(decrementAirportUserCount('DFW')).rejects.toThrow(
+        'ConditionalCheckFailed'
+      );
     });
   });
 

@@ -3,6 +3,7 @@ import {
   saveFlightPrice,
   getFlightPrice,
   getFlightPricesForAirport,
+  getFlightPricesForRoute,
   getExpiredFlightPrices,
 } from '../../db/flightPriceQueries.js';
 import { docClient } from '../../db/client.js';
@@ -200,6 +201,65 @@ describe('flightPriceQueries', () => {
 
       expect(results).toHaveLength(1);
       expect(results[0].originAirport).toBe('DFW');
+    });
+  });
+
+  describe('getFlightPricesForRoute', () => {
+    it('should return all prices for a specific route', async () => {
+      const mockItems: FlightPriceItem[] = [
+        {
+          PK: 'FLIGHT#DFW#Miami',
+          SK: '2025-02-15',
+          price: 287,
+          currency: 'USD',
+          airline: 'AA',
+          fetchedAt: '2025-01-01T00:00:00Z',
+          expiresAt: '2025-01-02T00:00:00Z',
+          source: 'amadeus',
+          rangeMin: null,
+          rangeMax: null,
+          originAirport: 'DFW',
+          destinationCity: 'Miami',
+          tournamentStartDate: '2025-02-15',
+          ttl: 1735776000,
+        },
+        {
+          PK: 'FLIGHT#DFW#Miami',
+          SK: '2025-03-20',
+          price: 315,
+          currency: 'USD',
+          airline: 'UA',
+          fetchedAt: '2025-01-01T00:00:00Z',
+          expiresAt: '2025-01-02T00:00:00Z',
+          source: 'amadeus',
+          rangeMin: null,
+          rangeMax: null,
+          originAirport: 'DFW',
+          destinationCity: 'Miami',
+          tournamentStartDate: '2025-03-20',
+          ttl: 1735776000,
+        },
+      ];
+
+      mockSend.mockResolvedValueOnce({ Items: mockItems } as never);
+
+      const results = await getFlightPricesForRoute('DFW', 'Miami');
+
+      expect(results).toHaveLength(2);
+      expect(results[0].tournamentStartDate).toBe('2025-02-15');
+      expect(results[1].tournamentStartDate).toBe('2025-03-20');
+    });
+
+    it('should use Query with correct PK', async () => {
+      mockSend.mockResolvedValueOnce({ Items: [] } as never);
+
+      await getFlightPricesForRoute('DFW', 'Miami');
+
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const input = mockSend.mock.calls[0][0].input as any;
+      expect(input.KeyConditionExpression).toBe('PK = :pk');
+      expect(input.ExpressionAttributeValues[':pk']).toBe('FLIGHT#DFW#Miami');
     });
   });
 });

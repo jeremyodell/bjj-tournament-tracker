@@ -3,6 +3,8 @@ import {
   calculateSmartTTL,
   shouldFetchFlightPrice,
   calculateDistance,
+  estimateDriveCost,
+  getTravelRecommendation,
 } from '../../services/flightPriceService.js';
 
 describe('flightPriceService', () => {
@@ -43,14 +45,14 @@ describe('flightPriceService', () => {
       expect(daysUntilExpiry).toBeLessThan(7.1);
     });
 
-    it('should return 24hr TTL for tournaments exactly 30 days away', () => {
+    it('should return 3-day TTL for tournaments exactly 30 days away', () => {
       const tournamentDate = new Date();
       tournamentDate.setDate(tournamentDate.getDate() + 30);
 
       const expiry = calculateSmartTTL(tournamentDate);
       const daysUntilExpiry = (expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
 
-      // At exactly 30 days, should use 3-day cache
+      // At exactly 30 days, should use 3-day cache (30-90 days tier)
       expect(daysUntilExpiry).toBeGreaterThan(2.9);
       expect(daysUntilExpiry).toBeLessThan(3.1);
     });
@@ -137,6 +139,65 @@ describe('flightPriceService', () => {
 
       const result = shouldFetchFlightPrice(dfwAirport, sanAntonioTournament, maxDriveHours);
       expect(result).toBe(true);
+    });
+  });
+
+  describe('estimateDriveCost', () => {
+    it('should calculate round-trip cost using IRS mileage rate', () => {
+      // 100 miles one-way = 200 miles round trip * $0.67 = $134
+      const cost = estimateDriveCost(100);
+      expect(cost).toBe(134);
+    });
+
+    it('should return 0 for zero distance', () => {
+      const cost = estimateDriveCost(0);
+      expect(cost).toBe(0);
+    });
+
+    it('should round to nearest dollar', () => {
+      // 150 miles one-way = 300 miles * $0.67 = $201
+      const cost = estimateDriveCost(150);
+      expect(cost).toBe(201);
+    });
+  });
+
+  describe('getTravelRecommendation', () => {
+    it('should recommend drive when within drive range preference', () => {
+      // 200 miles = ~3.3 hours, within 6 hour preference
+      const result = getTravelRecommendation(200, 300, 6);
+      expect(result).toBe('drive');
+    });
+
+    it('should recommend fly when outside drive range and flying is cheaper', () => {
+      // 600 miles = 10 hours, flight $300, drive $804
+      const result = getTravelRecommendation(600, 300, 6);
+      expect(result).toBe('fly');
+    });
+
+    it('should recommend fly when flight price is null and distance is long', () => {
+      // Long distance but no flight price - assume fly is better
+      const result = getTravelRecommendation(1000, null, 6);
+      expect(result).toBe('fly');
+    });
+
+    it('should recommend drive for moderate distances when cost-effective', () => {
+      // 400 miles = ~6.7 hours, drive cost $536
+      // Flight is $700 - drive is cheaper even though over preference
+      const result = getTravelRecommendation(400, 700, 4);
+      expect(result).toBe('drive');
+    });
+
+    it('should recommend fly for long distances even if driving is slightly cheaper', () => {
+      // 800 miles = ~13 hours, drive cost $1,072
+      // Flight is $400 - fly wins
+      const result = getTravelRecommendation(800, 400, 6);
+      expect(result).toBe('fly');
+    });
+
+    it('should recommend drive when within max drive hours', () => {
+      // User willing to drive 8 hours, 480 miles = 8 hours
+      const result = getTravelRecommendation(480, 200, 8);
+      expect(result).toBe('drive');
     });
   });
 });
