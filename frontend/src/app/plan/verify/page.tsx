@@ -52,16 +52,16 @@ export default function VerifyPage() {
       const currentYear = new Date().getFullYear();
       const birthYear = age ? currentYear - age : undefined;
 
-      await createAthlete(token, {
+      const newAthlete = await createAthlete(token, {
         name: athleteName,
         beltRank: belt || undefined,
         birthYear,
         weight: weight ? parseInt(weight) : undefined,
       });
 
-      // Clear store and redirect to My Season
+      // Clear store and redirect to athlete's plan
       reset();
-      router.push('/wishlist');
+      router.push(`/plan/${newAthlete.athleteId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save athlete');
       setIsSubmitting(false);
