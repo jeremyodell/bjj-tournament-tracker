@@ -46,6 +46,7 @@ interface PlannerState {
   removeTournament: (tournamentId: string) => void;
   setIsGenerating: (isGenerating: boolean) => void;
   markWizardComplete: () => void;
+  resetWizard: () => void;
   reset: () => void;
 }
 
@@ -142,6 +143,8 @@ export const usePlannerStore = create<PlannerState>()(
       setIsGenerating: (isGenerating) => set({ isGenerating }),
 
       markWizardComplete: () => set({ hasCompletedWizard: true }),
+
+      resetWizard: () => set({ hasCompletedWizard: false, plan: [] }),
 
       reset: () => set({
         config: defaultConfig,
