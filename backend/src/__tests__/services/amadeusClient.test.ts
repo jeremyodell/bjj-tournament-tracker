@@ -34,7 +34,7 @@ describe('AmadeusClient', () => {
 
       expect(client.isAuthenticated()).toBe(true);
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.amadeus.com/v1/security/oauth2/token',
+        'https://test.api.amadeus.com/v1/security/oauth2/token',
         expect.objectContaining({
           method: 'POST',
           headers: {

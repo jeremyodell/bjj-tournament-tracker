@@ -198,6 +198,25 @@ Set `NEXT_PUBLIC_DEV_MODE=true` in frontend to bypass Cognito for local testing.
 - `POST /wishlist` - Add to wishlist
 - `DELETE /wishlist/{tournamentId}` - Remove from wishlist
 
+## Pre-Commit Requirements (MANDATORY)
+
+**Before EVERY commit, you MUST:**
+
+1. **Run all tests** - Both frontend and backend must pass
+   ```bash
+   cd frontend && npm test
+   cd backend && npm test
+   ```
+
+2. **Build the frontend** - Catch TypeScript and build errors
+   ```bash
+   cd frontend && npm run build
+   ```
+
+3. **Fix any failures** before committing - Never commit broken code
+
+This is non-negotiable. Do not commit without running tests first.
+
 ## Testing
 
 - **Framework:** Vitest + React Testing Library
