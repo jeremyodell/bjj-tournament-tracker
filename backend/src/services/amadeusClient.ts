@@ -36,7 +36,8 @@ export class AmadeusClient {
   private apiSecret: string;
   private accessToken: string | null = null;
   private tokenExpiry: Date | null = null;
-  private readonly baseUrl = 'https://api.amadeus.com';
+  // Use test environment - production requires separate contract/credentials
+  private readonly baseUrl = 'https://test.api.amadeus.com';
 
   constructor(apiKey: string, apiSecret: string) {
     this.apiKey = apiKey;

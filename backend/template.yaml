@@ -62,6 +62,12 @@ Parameters:
       - 'false'
     Description: Enable flight price fetching infrastructure
 
+  GoogleMapsApiKey:
+    Type: String
+    Default: ''
+    NoEcho: true
+    Description: Google Maps API Key for geocoding
+
 Resources:
   # ============================================
   # DynamoDB Table
@@ -294,6 +300,9 @@ Resources:
       Description: Syncs tournament data from IBJJF and JJWL
       Timeout: 180
       MemorySize: 1536
+      Environment:
+        Variables:
+          GOOGLE_MAPS_API_KEY: !Ref GoogleMapsApiKey
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref TournamentsTable
