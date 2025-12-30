@@ -1,10 +1,12 @@
 // frontend/src/components/planner/PlannerConfig.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { usePlannerStore } from '@/stores/plannerStore';
+import { useAuthStore } from '@/stores/authStore';
 import { useTournaments } from '@/hooks/useTournaments';
 import { generatePlan, getHomeLocationFromAirport } from '@/lib/planGenerator';
+import { registerAirport } from '@/lib/api';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -20,6 +22,7 @@ interface PlannerConfigProps {
 
 export function PlannerConfig({ athleteName }: PlannerConfigProps) {
   const { config, updateConfig, removeMustGo, isGenerating, setIsGenerating, setPlan } = usePlannerStore();
+  const { getAccessToken, isAuthenticated } = useAuthStore();
   const {
     data: tournamentsData,
     isLoading: isTournamentsLoading,
@@ -28,6 +31,7 @@ export function PlannerConfig({ athleteName }: PlannerConfigProps) {
     isFetchingNextPage,
   } = useTournaments();
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const lastRegisteredAirport = useRef<string | null>(null);
 
   const availableBudget = config.totalBudget - config.reserveBudget;
 
@@ -39,6 +43,20 @@ export function PlannerConfig({ athleteName }: PlannerConfigProps) {
     if (!homeLocation) {
       setGenerationError('Invalid airport code. Please enter a valid 3-letter airport code.');
       return;
+    }
+
+    // Register airport with backend if authenticated and changed
+    if (isAuthenticated && config.homeAirport && config.homeAirport !== lastRegisteredAirport.current) {
+      try {
+        const token = await getAccessToken();
+        if (token) {
+          await registerAirport(token, config.homeAirport);
+          lastRegisteredAirport.current = config.homeAirport;
+        }
+      } catch (error) {
+        // Don't block generation if airport registration fails
+        console.error('Failed to register airport:', error);
+      }
     }
 
     setIsGenerating(true);

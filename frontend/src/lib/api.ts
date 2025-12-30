@@ -116,4 +116,19 @@ export async function deleteAthlete(accessToken: string, athleteId: string): Pro
   });
 }
 
+// Airport registration API
+export interface RegisterAirportResponse {
+  airport: string;
+  message: string;
+  isNew: boolean;
+}
+
+export async function registerAirport(accessToken: string, airport: string): Promise<RegisterAirportResponse> {
+  const response = await api.post('/airports',
+    { airport },
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  return response.data;
+}
+
 export default api;

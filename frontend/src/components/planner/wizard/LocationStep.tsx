@@ -1,10 +1,12 @@
 // frontend/src/components/planner/wizard/LocationStep.tsx
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { usePlannerStore } from '@/stores/plannerStore';
+import { useAuthStore } from '@/stores/authStore';
 import { Input } from '@/components/ui/input';
 import { getHomeLocationFromAirport } from '@/lib/planGenerator';
+import { registerAirport } from '@/lib/api';
 
 interface LocationStepProps {
   onNext: () => void;
@@ -13,6 +15,8 @@ interface LocationStepProps {
 
 export function LocationStep({ onNext, onBack }: LocationStepProps) {
   const { config, updateConfig } = usePlannerStore();
+  const { getAccessToken, isAuthenticated } = useAuthStore();
+  const lastRegisteredAirport = useRef<string | null>(null);
 
   const airportValidation = useMemo(() => {
     if (!config.homeAirport) {
@@ -28,6 +32,23 @@ export function LocationStep({ onNext, onBack }: LocationStepProps) {
   const handleAirportChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.toUpperCase().slice(0, 4);
     updateConfig({ homeAirport: value });
+  };
+
+  const handleNext = async () => {
+    // Register the airport with the backend if authenticated and airport changed
+    if (isAuthenticated && config.homeAirport && config.homeAirport !== lastRegisteredAirport.current) {
+      try {
+        const token = await getAccessToken();
+        if (token) {
+          await registerAirport(token, config.homeAirport);
+          lastRegisteredAirport.current = config.homeAirport;
+        }
+      } catch (error) {
+        // Don't block navigation if airport registration fails
+        console.error('Failed to register airport:', error);
+      }
+    }
+    onNext();
   };
 
   const sliderPercentage = ((config.maxDriveHours - 1) / (12 - 1)) * 100;
@@ -110,7 +131,7 @@ export function LocationStep({ onNext, onBack }: LocationStepProps) {
           Back
         </button>
         <button
-          onClick={onNext}
+          onClick={handleNext}
           disabled={!airportValidation.isValid}
           className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-full font-semibold transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
           style={{
