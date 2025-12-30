@@ -1,7 +1,6 @@
 // frontend/src/components/profile/AthleteCard.tsx
 'use client';
 
-import Link from 'next/link';
 import type { Athlete } from '@/lib/api';
 import { useAthleteMutations } from '@/hooks/useAthletes';
 
@@ -65,19 +64,6 @@ export function AthleteCard({ athlete, onEdit }: AthleteCardProps) {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* View Season Plan button */}
-        <Link
-          href={`/planner/${athlete.athleteId}`}
-          className="px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 hover:scale-105"
-          style={{
-            background: 'linear-gradient(135deg, #d4af37 0%, #c9a227 50%, #b8962a 100%)',
-            color: '#000',
-            boxShadow: '0 0 20px rgba(212, 175, 55, 0.2), 0 0 40px rgba(212, 175, 55, 0.1)',
-          }}
-        >
-          View Season Plan
-        </Link>
-
         {/* Edit button */}
         <button
           onClick={() => onEdit(athlete)}
