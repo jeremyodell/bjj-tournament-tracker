@@ -17,6 +17,16 @@ export const buildVenuePK = (venueId: string): string =>
 export const buildVenueLookupSK = (venue: string, city: string): string =>
   `${venue.toLowerCase().trim()}#${city.toLowerCase().trim()}`;
 
+// Flight price key builders
+export const buildFlightPK = (originAirport: string, destinationCity: string): string =>
+  `FLIGHT#${originAirport}#${destinationCity}`;
+
+export const buildAirportPK = (iataCode: string): string =>
+  `AIRPORT#${iataCode}`;
+
+export const buildWsConnPK = (connectionId: string): string =>
+  `WSCONN#${connectionId}`;
+
 // Entity types
 export interface TournamentItem {
   PK: string; // TOURN#<org>#<externalId>
@@ -97,9 +107,56 @@ export interface VenueItem {
   updatedAt: string;
 }
 
+// Flight price cache entity
+export interface FlightPriceItem {
+  PK: string; // FLIGHT#{originAirport}#{destinationCity}
+  SK: string; // {tournamentStartDate}
+  price: number | null;
+  currency: 'USD';
+  airline: string | null;
+  fetchedAt: string;
+  expiresAt: string;
+  source: 'amadeus' | 'estimated_range';
+  rangeMin: number | null;
+  rangeMax: number | null;
+  originAirport: string;
+  destinationCity: string;
+  tournamentStartDate: string;
+  ttl: number;
+}
+
+// Known airport entity (for tracking user airports for daily cron)
+export interface KnownAirportItem {
+  PK: string; // AIRPORT#{iataCode}
+  SK: 'META';
+  GSI1PK: 'AIRPORTS';
+  GSI1SK: string; // {iataCode}
+  iataCode: string;
+  userCount: number;
+  lastFetchedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// WebSocket connection entity
+export interface WsConnectionItem {
+  PK: string; // WSCONN#{connectionId}
+  SK: 'META';
+  GSI1PK: string; // USER#{userId}
+  GSI1SK: 'WSCONN';
+  connectionId: string;
+  userId: string;
+  pendingAirport: string | null;
+  connectedAt: string;
+  ttl: number;
+}
+
 export type DynamoDBItem =
   | TournamentItem
   | UserProfileItem
   | AthleteItem
   | WishlistItem
-  | VenueItem;
+  | VenueItem
+  | FlightPriceItem
+  | KnownAirportItem
+  | WsConnectionItem;
