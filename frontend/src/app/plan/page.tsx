@@ -54,9 +54,9 @@ function PlanSetupContent() {
           // No athletes - show setup form
           setShowForm(true);
         } else if (athletes.length === 1) {
-          // Single athlete - auto-select and go to My Season
+          // Single athlete - auto-select and go to athlete's season page
           loadFromAthlete(athletes[0]);
-          router.replace('/wishlist');
+          router.replace(`/plan/${athletes[0].athleteId}`);
           return;
         } else {
           // Multiple athletes - go to select page
@@ -97,6 +97,11 @@ function PlanSetupContent() {
 
           // Load the new athlete into the store
           loadFromAthlete(newAthlete);
+
+          setIsCreatingAthlete(false);
+          // Redirect to the new athlete's season page
+          router.push(`/plan/${newAthlete.athleteId}`);
+          return;
         }
       } catch (error) {
         console.error('Failed to create athlete:', error);
@@ -104,7 +109,8 @@ function PlanSetupContent() {
       setIsCreatingAthlete(false);
     }
 
-    router.push('/wishlist');
+    // For unauthenticated users, redirect to select page (they'll need to sign up)
+    router.push('/plan/select');
   };
 
   // Show loading while checking auth or athletes

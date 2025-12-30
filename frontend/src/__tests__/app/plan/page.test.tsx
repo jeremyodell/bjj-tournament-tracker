@@ -90,10 +90,10 @@ describe('PlanPage', () => {
       });
     });
 
-    it('redirects to /wishlist after auto-selecting', async () => {
+    it('redirects to /plan/{athleteId} after auto-selecting', async () => {
       render(<PlanPage />);
       await waitFor(() => {
-        expect(mockReplace).toHaveBeenCalledWith('/wishlist');
+        expect(mockReplace).toHaveBeenCalledWith('/plan/athlete-1');
       }, { timeout: 3000 });
     });
 
