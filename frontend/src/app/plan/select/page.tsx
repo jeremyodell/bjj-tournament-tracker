@@ -39,7 +39,7 @@ export default function SelectPage() {
 
   const handleSelectAthlete = (athlete: Athlete) => {
     loadFromAthlete(athlete);
-    router.push('/wishlist');
+    router.push(`/plan/${athlete.athleteId}`);
   };
 
   const handleAddNewAthlete = () => {
