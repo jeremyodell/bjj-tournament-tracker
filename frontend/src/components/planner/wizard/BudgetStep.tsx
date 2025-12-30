@@ -24,10 +24,11 @@ export function BudgetStep({ onNext }: BudgetStepProps) {
       <div className="space-y-6 max-w-sm mx-auto">
         {/* Total Budget */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Total Budget for the Year</label>
+          <label htmlFor="total-budget" className="text-sm font-medium">Total Budget for the Year</label>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg opacity-60">$</span>
             <Input
+              id="total-budget"
               type="number"
               value={config.totalBudget}
               onChange={(e) => updateConfig({ totalBudget: parseInt(e.target.value) || 0 })}
@@ -39,11 +40,12 @@ export function BudgetStep({ onNext }: BudgetStepProps) {
 
         {/* Reserve Budget */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Reserve for Unannounced Events</label>
+          <label htmlFor="reserve-budget" className="text-sm font-medium">Reserve for Unannounced Events</label>
           <p className="text-xs opacity-50">Set aside for surprise tournaments (JJWL often announces late)</p>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg opacity-60">$</span>
             <Input
+              id="reserve-budget"
               type="number"
               value={config.reserveBudget}
               onChange={(e) => updateConfig({ reserveBudget: parseInt(e.target.value) || 0 })}
