@@ -31,14 +31,17 @@ export function PlannerWizard({ athleteName, onComplete }: PlannerWizardProps) {
     setIsGenerating(true);
 
     try {
-      // Fetch all pages
+      // Fetch all pages, keeping track of latest data to avoid stale closure
+      let latestData = tournamentsData;
       let hasMore = hasNextPage;
       while (hasMore) {
         const result = await fetchNextPage();
+        latestData = result.data;
         hasMore = result.hasNextPage ?? false;
       }
 
-      const allTournaments = tournamentsData?.pages.flatMap(page => page.tournaments) ?? [];
+      // Use latestData from the last fetchNextPage result to avoid stale closure
+      const allTournaments = latestData?.pages.flatMap(page => page.tournaments) ?? [];
 
       // Generate plan with setTimeout for UI responsiveness
       setTimeout(() => {
@@ -51,7 +54,8 @@ export function PlannerWizard({ athleteName, onComplete }: PlannerWizardProps) {
           setIsGenerating(false);
         }
       }, 100);
-    } catch {
+    } catch (error) {
+      console.error('Plan generation failed:', error);
       setIsGenerating(false);
     }
   };
