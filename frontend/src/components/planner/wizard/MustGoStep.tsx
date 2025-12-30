@@ -61,6 +61,8 @@ export function MustGoStep({ onNext, onBack }: MustGoStepProps) {
     } else {
       addMustGo(tournament.id);
     }
+    // Clear search to close dropdown after selection
+    setSearchQuery('');
   };
 
   return (
