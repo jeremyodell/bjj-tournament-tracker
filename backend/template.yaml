@@ -417,6 +417,77 @@ Resources:
         External:
           - '@aws-sdk/*'
 
+  FlightPricesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub bjj-tournament-tracker-flight-prices-${Stage}
+      Handler: dist/handlers/flightPrices.handler
+      CodeUri: .
+      Description: Handles flight price queries and airport registration
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TournamentsTable
+      Events:
+        GetFlightPrices:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /flight-prices
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/flightPrices.ts
+        External:
+          - '@aws-sdk/*'
+
+  AirportsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub bjj-tournament-tracker-airports-${Stage}
+      Handler: dist/handlers/airports.handler
+      CodeUri: .
+      Description: Handles airport registration and triggers flight price fetching
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TournamentsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: !If
+                - FlightPricesEnabled
+                - !GetAtt FlightPriceEventBus.Arn
+                - !Sub arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/bjj-flight-prices-${Stage}
+      Environment:
+        Variables:
+          EVENT_BUS_NAME: !Sub bjj-flight-prices-${Stage}
+      Events:
+        RegisterAirport:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /airports
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/airports.ts
+        External:
+          - '@aws-sdk/*'
+
   # ============================================
   # Flight Price Infrastructure (Conditional)
   # ============================================
