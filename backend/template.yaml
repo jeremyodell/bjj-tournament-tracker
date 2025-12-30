@@ -531,12 +531,13 @@ Resources:
       Name: !Sub bjj-flight-prices-${Stage}
 
   # Daily flight price refresh rule (4 AM UTC)
+  # Note: Scheduled rules must use the default event bus
   DailyFlightPriceRule:
     Type: AWS::Events::Rule
     Condition: FlightPricesEnabled
     Properties:
       Name: !Sub daily-flight-price-fetch-${Stage}
-      EventBusName: !Ref FlightPriceEventBus
+      # Scheduled rules cannot use custom event bus - use default
       ScheduleExpression: cron(0 4 * * ? *)
       State: ENABLED
       Targets:
