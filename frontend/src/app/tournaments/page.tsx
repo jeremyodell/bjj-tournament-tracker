@@ -4,16 +4,13 @@ import { Suspense } from 'react';
 import { TournamentList } from '@/components/tournaments/TournamentList';
 import { TournamentFilters } from '@/components/tournaments/TournamentFilters';
 import { TournamentGridSkeleton } from '@/components/tournaments/TournamentCardSkeleton';
-import { AppHeader } from '@/components/layout/AppHeader';
 import { Footer } from '@/components/landing/Footer';
 
 export default function TournamentsPage() {
   return (
     <div className="relative min-h-screen flex flex-col">
-      <AppHeader />
-
-      {/* Main content with top padding for fixed header */}
-      <main className="relative z-10 flex-1 pt-16">
+      {/* Main content */}
+      <main className="relative z-10 flex-1">
         <div className="container mx-auto max-w-7xl py-8 sm:py-12 px-4">
           {/* Page Header */}
           <div className="mb-8 sm:mb-12">

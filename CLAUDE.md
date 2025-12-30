@@ -100,6 +100,16 @@ GOOGLE_MAPS_API_KEY=xxxxx
 
 ## Common Commands
 
+### Full Stack Development
+```bash
+./dev.sh start    # Start both frontend + backend + DynamoDB
+./dev.sh stop     # Stop both
+./dev.sh status   # Check what's running
+./dev.sh restart  # Restart both
+./dev.sh logs backend   # Tail backend logs
+./dev.sh logs frontend  # Tail frontend logs
+```
+
 ### Frontend
 ```bash
 cd frontend

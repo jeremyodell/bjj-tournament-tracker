@@ -4,7 +4,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
-import { LandingNav } from '@/components/landing/LandingNav';
 
 export default function ProtectedLayout({
   children,
@@ -25,8 +24,7 @@ export default function ProtectedLayout({
 
   return (
     <div className="min-h-screen bg-black">
-      <LandingNav />
-      <main className="pt-20">
+      <main>
         {isLoading ? (
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#d4af37] border-t-transparent" />

@@ -5,6 +5,7 @@ import { Instrument_Serif } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground';
+import { AppHeader } from '@/components/layout/AppHeader';
 
 const satoshi = localFont({
   src: '../../public/fonts/Satoshi-Variable.woff2',
@@ -34,7 +35,12 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className={`${satoshi.variable} ${instrumentSerif.variable}`} style={{ fontFamily: 'var(--font-satoshi)' }} suppressHydrationWarning>
         <AnimatedBackground />
-        <Providers>{children}</Providers>
+        <Providers>
+          <AppHeader />
+          <div className="pt-16">
+            {children}
+          </div>
+        </Providers>
       </body>
     </html>
   );
