@@ -44,13 +44,17 @@ export function PlannerConfig({ athleteName }: PlannerConfigProps) {
     setIsGenerating(true);
 
     try {
-      // Fetch all pages if there are more to load
-      while (hasNextPage) {
-        await fetchNextPage();
+      // Fetch all pages, keeping track of latest data to avoid stale closure
+      let latestData = tournamentsData;
+      let hasMore = hasNextPage;
+      while (hasMore) {
+        const result = await fetchNextPage();
+        latestData = result.data;
+        hasMore = result.hasNextPage ?? false;
       }
 
-      // Flatten all tournament pages into a single array
-      const allTournaments = tournamentsData?.pages.flatMap(page => page.tournaments) ?? [];
+      // Use latestData from the last fetchNextPage result to avoid stale closure
+      const allTournaments = latestData?.pages.flatMap(page => page.tournaments) ?? [];
 
       // Use setTimeout to allow UI to update before potentially heavy computation
       setTimeout(() => {
