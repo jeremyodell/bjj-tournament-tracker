@@ -76,6 +76,7 @@ export interface AthleteItem {
   beltRank: string | null;
   birthYear: number | null;
   weightClass: string | null;
+  homeAirport: string | null;
   createdAt: string;
   updatedAt: string;
 }

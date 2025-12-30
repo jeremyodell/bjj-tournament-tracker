@@ -11,6 +11,7 @@ export interface CreateAthleteInput {
   gender?: string;
   weight?: number;
   gymName?: string;
+  homeAirport?: string;
 }
 
 export async function getUserAthletes(userId: string): Promise<AthleteItem[]> {
@@ -42,6 +43,7 @@ export async function createAthlete(
     beltRank: input.beltRank || null,
     birthYear: input.birthYear || null,
     weightClass: input.weight ? `${input.weight}lbs` : null,
+    homeAirport: input.homeAirport?.trim().toUpperCase() || null,
     createdAt: now,
     updatedAt: now,
   };
@@ -80,6 +82,9 @@ export async function updateAthlete(
     beltRank: input.beltRank ?? existing.beltRank,
     birthYear: input.birthYear ?? existing.birthYear,
     weightClass: input.weight ? `${input.weight}lbs` : existing.weightClass,
+    homeAirport: input.homeAirport !== undefined
+      ? (input.homeAirport?.trim().toUpperCase() || null)
+      : existing.homeAirport,
     updatedAt: new Date().toISOString(),
   };
 

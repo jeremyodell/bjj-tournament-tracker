@@ -5,8 +5,11 @@ import {
   getUserAthletes,
   createAthlete,
   updateAthlete,
-  deleteAthlete
+  deleteAthlete,
+  getAthlete
 } from '../db/athleteQueries.js';
+import { saveKnownAirport, getKnownAirport } from '../db/airportQueries.js';
+import { publishAirportAddedEvent } from '../services/eventBridgeService.js';
 import { ValidationError } from '../shared/errors.js';
 
 const athletesHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
@@ -35,10 +38,31 @@ const athletesHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayP
   // PUT /athletes/:athleteId - update athlete
   if (method === 'PUT' && athleteId) {
     const body = JSON.parse(event.body || '{}');
+
+    // Get existing athlete to check for homeAirport change
+    const existingAthlete = await getAthlete(auth.userId, athleteId);
+    const oldAirport = existingAthlete?.homeAirport;
+
     const updated = await updateAthlete(auth.userId, athleteId, body);
 
     if (!updated) {
       throw new ValidationError('Athlete not found');
+    }
+
+    // Check if homeAirport was in the update payload and changed
+    const newAirport = updated.homeAirport;
+    if (body.homeAirport !== undefined && newAirport && newAirport !== oldAirport) {
+      // Check if this is a new airport
+      const existingAirport = await getKnownAirport(newAirport);
+      const isNewAirport = !existingAirport;
+
+      // Save/update the airport (increments user count if exists)
+      await saveKnownAirport(newAirport);
+
+      // Trigger EventBridge event only for new airports to start fetching prices
+      if (isNewAirport) {
+        await publishAirportAddedEvent(newAirport, auth.userId);
+      }
     }
 
     return jsonResponse(200, updated);
