@@ -3,9 +3,11 @@ import { withErrorHandler, jsonResponse } from './middleware/errorHandler.js';
 import { extractAuthContext } from './middleware/authMiddleware.js';
 import { getFlightPricesForAirport } from '../db/flightPriceQueries.js';
 import { ValidationError } from '../shared/errors.js';
+import { isValidAirportCode } from '../shared/validation.js';
 
 const flightPricesHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  const auth = extractAuthContext(event);
+  // Verify authentication (user ID not needed for flight price queries)
+  extractAuthContext(event);
   const method = event.httpMethod;
 
   // GET /flight-prices?airport=DFW - get cached flight prices for an airport
@@ -14,6 +16,10 @@ const flightPricesHandler = async (event: APIGatewayProxyEvent): Promise<APIGate
 
     if (!airport) {
       throw new ValidationError('airport query parameter is required');
+    }
+
+    if (!isValidAirportCode(airport)) {
+      throw new ValidationError('airport must be a valid 3-letter IATA code');
     }
 
     const prices = await getFlightPricesForAirport(airport);

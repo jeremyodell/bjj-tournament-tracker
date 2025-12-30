@@ -4,11 +4,7 @@ import { extractAuthContext } from './middleware/authMiddleware.js';
 import { saveKnownAirport, getKnownAirport } from '../db/airportQueries.js';
 import { publishAirportAddedEvent } from '../services/eventBridgeService.js';
 import { ValidationError } from '../shared/errors.js';
-
-// Validate IATA airport code (3 letters)
-function isValidAirportCode(code: string): boolean {
-  return /^[A-Z]{3}$/.test(code);
-}
+import { isValidAirportCode } from '../shared/validation.js';
 
 const airportsHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   const auth = extractAuthContext(event);

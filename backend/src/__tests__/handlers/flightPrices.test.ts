@@ -70,6 +70,18 @@ describe('flightPrices handler', () => {
       expect(result.statusCode).toBe(400);
     });
 
+    it('should return 400 when airport code is invalid (wrong length)', async () => {
+      const event = createMockEvent({
+        queryStringParameters: { airport: 'DFWX' },
+      });
+
+      const result = await handler(event, mockContext);
+
+      expect(result.statusCode).toBe(400);
+      const body = JSON.parse(result.body);
+      expect(body.message).toContain('valid');
+    });
+
     it('should return flight prices for a valid airport', async () => {
       const mockPrices = [
         {
