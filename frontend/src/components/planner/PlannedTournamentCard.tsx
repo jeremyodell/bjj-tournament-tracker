@@ -199,27 +199,57 @@ export function PlannedTournamentCard({ plannedTournament, index, onTravelTypeCl
                   <span className="opacity-60 ml-1">({Math.round(driveDistance)} mi)</span>
                 )}
 
-                {/* Tooltip for flight details */}
-                {showTooltip && travelType === 'fly' && flightPrice && (
+                {/* Tooltip for travel details */}
+                {showTooltip && (
                   <div
                     className="absolute left-0 top-full mt-2 z-20 p-3 rounded-lg text-left whitespace-nowrap"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.9)',
+                      background: 'rgba(0, 0, 0, 0.95)',
                       border: '1px solid var(--glass-border)',
-                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
                     }}
                   >
-                    <div className="text-sm font-medium mb-1">
-                      {flightPrice.route.origin} → {flightPrice.route.destination}
-                    </div>
-                    {flightPrice.airline && (
-                      <div className="text-xs opacity-70">{flightPrice.airline}</div>
+                    {travelType === 'fly' && flightPrice ? (
+                      <>
+                        <div className="text-sm font-medium mb-1">
+                          {flightPrice.route.origin} → {flightPrice.route.destination}
+                        </div>
+                        {flightPrice.airline && (
+                          <div className="text-xs opacity-70">{flightPrice.airline}</div>
+                        )}
+                        <div className="text-xs opacity-50 mt-1">
+                          {flightPrice.source === 'amadeus' ? 'Checked ' : 'Based on similar routes • '}
+                          {new Date(flightPrice.fetchedAt).toLocaleDateString()}
+                        </div>
+                      </>
+                    ) : travelType === 'fly' ? (
+                      <>
+                        <div className="text-sm font-medium mb-1">
+                          ✈️ Estimated flight cost
+                        </div>
+                        <div className="text-xs opacity-70">
+                          ${travelCost} round-trip
+                        </div>
+                        <div className="text-xs opacity-50 mt-1">
+                          Based on distance to {tournament.city}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-sm font-medium mb-1">
+                          🚗 Drive
+                        </div>
+                        <div className="text-xs opacity-70">
+                          {driveDistance ? `${Math.round(driveDistance)} miles each way` : 'Distance calculated'}
+                        </div>
+                        <div className="text-xs opacity-50 mt-1">
+                          ${travelCost} total (IRS mileage rate)
+                        </div>
+                      </>
                     )}
-                    <div className="text-xs opacity-50 mt-1">
-                      {flightPrice.source === 'amadeus' ? 'Checked ' : 'Based on similar routes • '}
-                      {new Date(flightPrice.fetchedAt).toLocaleDateString()}
+                    <div className="text-xs text-blue-400 mt-2 pt-2 border-t border-white/10">
+                      Click to change travel type
                     </div>
-                    <div className="text-xs opacity-50 mt-0.5">Click to change</div>
                   </div>
                 )}
               </button>
