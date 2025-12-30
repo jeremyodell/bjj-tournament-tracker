@@ -13,7 +13,7 @@ import { useAuthStore } from '@/stores/authStore';
  * - Glass background with blur (works over content, not heroes)
  * - Fixed positioning with subtle border
  * - Gold accent on hover, consistent with brand
- * - Navigation links for Browse, My Season, Profile
+ * - Navigation links for Browse, My Plan, Profile
  */
 export function AppHeader() {
   const pathname = usePathname();
@@ -21,7 +21,7 @@ export function AppHeader() {
 
   const navLinks = [
     { href: '/tournaments', label: 'Browse' },
-    { href: '/plan', label: 'My Season' },
+    { href: '/plan', label: 'My Plan' },
     { href: '/profile', label: 'Profile' },
   ];
 
