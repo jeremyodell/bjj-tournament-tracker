@@ -1,11 +1,14 @@
 // frontend/src/components/planner/PlannerResults.tsx
 'use client';
 
-import { usePlannerStore } from '@/stores/plannerStore';
+import { useState } from 'react';
+import { usePlannerStore, type PlannedTournament } from '@/stores/plannerStore';
 import { PlannedTournamentCard } from './PlannedTournamentCard';
+import { TravelOverrideModal } from './TravelOverrideModal';
 
 export function PlannerResults() {
-  const { plan, config, isGenerating, setIsGenerating } = usePlannerStore();
+  const { plan, config, isGenerating, setIsGenerating, updateTravelType } = usePlannerStore();
+  const [selectedTournament, setSelectedTournament] = useState<PlannedTournament | null>(null);
 
   // Calculate budget usage
   const usedBudget = plan.reduce((sum, p) => sum + p.registrationCost + p.travelCost, 0);
@@ -87,8 +90,22 @@ export function PlannerResults() {
                 key={plannedTournament.tournament.id}
                 plannedTournament={plannedTournament}
                 index={index}
+                onTravelTypeClick={setSelectedTournament}
               />
             ))}
+
+            {/* Travel Override Modal */}
+            {selectedTournament && (
+              <TravelOverrideModal
+                isOpen={!!selectedTournament}
+                plannedTournament={selectedTournament}
+                onClose={() => setSelectedTournament(null)}
+                onSave={(travelType, travelCost) => {
+                  updateTravelType(selectedTournament.tournament.id, travelType, travelCost);
+                  setSelectedTournament(null);
+                }}
+              />
+            )}
           </div>
         )}
       </div>
