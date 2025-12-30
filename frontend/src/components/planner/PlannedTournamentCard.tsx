@@ -1,17 +1,20 @@
 // frontend/src/components/planner/PlannedTournamentCard.tsx
 'use client';
 
+import { useState } from 'react';
 import type { PlannedTournament } from '@/stores/plannerStore';
 import { usePlannerStore } from '@/stores/plannerStore';
 
 interface PlannedTournamentCardProps {
   plannedTournament: PlannedTournament;
   index?: number;
+  onTravelTypeClick?: (plannedTournament: PlannedTournament) => void;
 }
 
-export function PlannedTournamentCard({ plannedTournament, index }: PlannedTournamentCardProps) {
+export function PlannedTournamentCard({ plannedTournament, index, onTravelTypeClick }: PlannedTournamentCardProps) {
   const { lockTournament, removeTournament } = usePlannerStore();
-  const { tournament, registrationCost, travelCost, travelType, isLocked } = plannedTournament;
+  const { tournament, registrationCost, travelCost, travelType, isLocked, flightPrice, driveDistance } = plannedTournament;
+  const [showTooltip, setShowTooltip] = useState(false);
 
   const totalCost = registrationCost + travelCost;
 
@@ -159,13 +162,17 @@ export function PlannedTournamentCard({ plannedTournament, index }: PlannedTourn
 
             {/* Cost Breakdown + Travel Type */}
             <div className="flex flex-wrap items-center gap-2">
-              {/* Travel Type Icon */}
-              <div
-                className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium gap-1.5"
+              {/* Travel Type - Clickable to change */}
+              <button
+                onClick={() => onTravelTypeClick?.(plannedTournament)}
+                onMouseEnter={() => setShowTooltip(true)}
+                onMouseLeave={() => setShowTooltip(false)}
+                className="relative inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium gap-1.5 transition-all hover:scale-105 cursor-pointer"
                 style={{
                   background: 'rgba(255, 255, 255, 0.05)',
                   border: '1px solid var(--glass-border)',
                 }}
+                title="Click to change travel type"
               >
                 {travelType === 'drive' ? (
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -176,10 +183,61 @@ export function PlannedTournamentCard({ plannedTournament, index }: PlannedTourn
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                   </svg>
                 )}
-                {travelType === 'drive' ? 'Drive' : 'Fly'}
+                <span>
+                  {travelType === 'drive' ? 'Drive' : 'Fly'}
+                  {travelType === 'fly' && flightPrice?.source === 'estimated_range' && (
+                    <span className="ml-1 opacity-60">~</span>
+                  )}
+                </span>
+                <span className="font-semibold">
+                  {travelType === 'fly' && flightPrice?.source === 'estimated_range' && flightPrice.rangeMin && flightPrice.rangeMax
+                    ? `$${flightPrice.rangeMin}-$${flightPrice.rangeMax}`
+                    : `$${travelCost}`}
+                </span>
+                {driveDistance && travelType === 'drive' && (
+                  <span className="opacity-60 ml-1">({Math.round(driveDistance)} mi)</span>
+                )}
+
+                {/* Tooltip for flight details */}
+                {showTooltip && travelType === 'fly' && flightPrice && (
+                  <div
+                    className="absolute left-0 top-full mt-2 z-20 p-3 rounded-lg text-left whitespace-nowrap"
+                    style={{
+                      background: 'rgba(0, 0, 0, 0.9)',
+                      border: '1px solid var(--glass-border)',
+                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+                    }}
+                  >
+                    <div className="text-sm font-medium mb-1">
+                      {flightPrice.route.origin} → {flightPrice.route.destination}
+                    </div>
+                    {flightPrice.airline && (
+                      <div className="text-xs opacity-70">{flightPrice.airline}</div>
+                    )}
+                    <div className="text-xs opacity-50 mt-1">
+                      {flightPrice.source === 'amadeus' ? 'Checked ' : 'Based on similar routes • '}
+                      {new Date(flightPrice.fetchedAt).toLocaleDateString()}
+                    </div>
+                    <div className="text-xs opacity-50 mt-0.5">Click to change</div>
+                  </div>
+                )}
+              </button>
+
+              {/* Registration Cost */}
+              <div
+                className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium gap-1.5"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid var(--glass-border)',
+                }}
+              >
+                <svg className="w-3.5 h-3.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                </svg>
+                <span>${registrationCost}</span>
               </div>
 
-              {/* Cost Breakdown */}
+              {/* Total Cost */}
               <div
                 className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium"
                 style={{
@@ -188,7 +246,7 @@ export function PlannedTournamentCard({ plannedTournament, index }: PlannedTourn
                   color: '#d4af37',
                 }}
               >
-                Reg ${registrationCost} + Travel ${travelCost} = ${totalCost}
+                Total: ${totalCost}
               </div>
             </div>
 

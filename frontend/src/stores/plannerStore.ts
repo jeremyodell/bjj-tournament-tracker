@@ -13,12 +13,25 @@ export interface PlannerConfig {
   mustGoTournaments: string[]; // tournament IDs
 }
 
+export interface FlightPrice {
+  price: number | null;
+  source: 'amadeus' | 'estimated_range';
+  rangeMin?: number;
+  rangeMax?: number;
+  airline?: string;
+  fetchedAt: string;
+  route: { origin: string; destination: string };
+}
+
 export interface PlannedTournament {
   tournament: Tournament;
   registrationCost: number;
   travelCost: number;
   travelType: 'drive' | 'fly';
   isLocked: boolean;
+  flightPrice?: FlightPrice;
+  driveCost?: number; // IRS mileage-based cost
+  driveDistance?: number; // miles
 }
 
 // Per-athlete state that gets saved/restored when switching athletes
@@ -44,6 +57,7 @@ interface PlannerState {
   setPlan: (plan: PlannedTournament[]) => void;
   lockTournament: (tournamentId: string) => void;
   removeTournament: (tournamentId: string) => void;
+  updateTravelType: (tournamentId: string, travelType: 'drive' | 'fly', travelCost: number) => void;
   setIsGenerating: (isGenerating: boolean) => void;
   markWizardComplete: () => void;
   resetWizard: () => void;
@@ -138,6 +152,14 @@ export const usePlannerStore = create<PlannerState>()(
 
       removeTournament: (tournamentId) => set((state) => ({
         plan: state.plan.filter(p => p.tournament.id !== tournamentId),
+      })),
+
+      updateTravelType: (tournamentId, travelType, travelCost) => set((state) => ({
+        plan: state.plan.map(p =>
+          p.tournament.id === tournamentId
+            ? { ...p, travelType, travelCost }
+            : p
+        ),
       })),
 
       setIsGenerating: (isGenerating) => set({ isGenerating }),
