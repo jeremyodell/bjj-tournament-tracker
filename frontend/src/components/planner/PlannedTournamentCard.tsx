@@ -51,13 +51,14 @@ export function PlannedTournamentCard({ plannedTournament, index, onTravelTypeCl
         animationDelay: `${(index || 0) * 100}ms`,
       }}
     >
-      {/* Must-Go Badge */}
+      {/* Must-Go Badge - positioned inside card to avoid overflow clipping */}
       {isLocked && (
         <div
-          className="absolute -top-2 -right-2 z-10 px-2 py-1 rounded-full text-xs font-bold"
+          className="absolute top-3 right-3 z-10 px-3 py-1 rounded-full text-xs font-bold shadow-lg"
           style={{
             background: 'linear-gradient(135deg, #d4af37 0%, #c9a227 100%)',
             color: '#000',
+            boxShadow: '0 2px 8px rgba(212, 175, 55, 0.4)',
           }}
         >
           Must-Go
