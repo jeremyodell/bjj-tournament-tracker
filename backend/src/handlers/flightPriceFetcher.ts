@@ -132,17 +132,18 @@ export async function handler(event: SQSEvent): Promise<void> {
     try {
       const body = JSON.parse(record.body);
 
-      if (body['detail-type'] === 'airport.added') {
+      // Handle transformed EventBridge events from InputTransformer
+      if (body.type === 'airport-added') {
         // New airport added by user - fetch prices
-        const { airport, userId } = body.detail;
-        console.log(`Processing airport.added for ${airport}, user ${userId}`);
+        const { airport, userId } = body;
+        console.log(`Processing airport-added for ${airport}, user ${userId}`);
         await fetchPricesForAirport(airport, userId);
-      } else if (body['detail-type'] === 'Scheduled Event') {
+      } else if (body.type === 'daily-refresh') {
         // Daily cron job
         console.log('Processing scheduled daily fetch');
         await runDailyFetch();
       } else {
-        console.log('Unknown event type:', body['detail-type']);
+        console.log('Unknown event type:', body.type);
       }
     } catch (error) {
       console.error('Error processing SQS record:', error);

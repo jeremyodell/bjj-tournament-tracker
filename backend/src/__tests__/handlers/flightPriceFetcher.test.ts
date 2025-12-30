@@ -105,14 +105,12 @@ describe('flightPriceFetcher handler', () => {
     mockFetchFlightPriceForTournament.mockResolvedValue(undefined);
   });
 
-  describe('airport.added event', () => {
-    it('should process airport.added event', async () => {
+  describe('airport-added event', () => {
+    it('should process airport-added event', async () => {
       const event = createSQSEvent({
-        'detail-type': 'airport.added',
-        detail: {
-          airport: 'DFW',
-          userId: 'user-123',
-        },
+        type: 'airport-added',
+        airport: 'DFW',
+        userId: 'user-123',
       });
 
       const futureTournament = createMockTournament();
@@ -130,11 +128,9 @@ describe('flightPriceFetcher handler', () => {
 
     it('should filter out past tournaments', async () => {
       const event = createSQSEvent({
-        'detail-type': 'airport.added',
-        detail: {
-          airport: 'DFW',
-          userId: 'user-123',
-        },
+        type: 'airport-added',
+        airport: 'DFW',
+        userId: 'user-123',
       });
 
       const pastTournament = createMockTournament({
@@ -154,11 +150,9 @@ describe('flightPriceFetcher handler', () => {
 
     it('should skip tournaments without lat/lng', async () => {
       const event = createSQSEvent({
-        'detail-type': 'airport.added',
-        detail: {
-          airport: 'DFW',
-          userId: 'user-123',
-        },
+        type: 'airport-added',
+        airport: 'DFW',
+        userId: 'user-123',
       });
 
       const tournamentWithoutCoords = createMockTournament({
@@ -178,11 +172,9 @@ describe('flightPriceFetcher handler', () => {
 
     it('should handle unknown airport gracefully', async () => {
       const event = createSQSEvent({
-        'detail-type': 'airport.added',
-        detail: {
-          airport: 'XXX', // Unknown airport code
-          userId: 'user-123',
-        },
+        type: 'airport-added',
+        airport: 'XXX', // Unknown airport code
+        userId: 'user-123',
       });
 
       await expect(handler(event)).resolves.not.toThrow();
@@ -190,10 +182,10 @@ describe('flightPriceFetcher handler', () => {
     });
   });
 
-  describe('Scheduled Event (daily cron)', () => {
+  describe('daily-refresh event (daily cron)', () => {
     it('should process scheduled daily fetch', async () => {
       const event = createSQSEvent({
-        'detail-type': 'Scheduled Event',
+        type: 'daily-refresh',
       });
 
       // Mock known airports
@@ -225,7 +217,7 @@ describe('flightPriceFetcher handler', () => {
 
     it('should handle empty airports list', async () => {
       const event = createSQSEvent({
-        'detail-type': 'Scheduled Event',
+        type: 'daily-refresh',
       });
 
       mockListKnownAirports.mockResolvedValue([]);
@@ -240,7 +232,7 @@ describe('flightPriceFetcher handler', () => {
   describe('unknown event type', () => {
     it('should handle unknown event type gracefully', async () => {
       const event = createSQSEvent({
-        'detail-type': 'unknown.event',
+        type: 'unknown-event',
       });
 
       await expect(handler(event)).resolves.not.toThrow();
@@ -253,8 +245,9 @@ describe('flightPriceFetcher handler', () => {
         Records: [
           {
             body: JSON.stringify({
-              'detail-type': 'airport.added',
-              detail: { airport: 'DFW', userId: 'user-1' },
+              type: 'airport-added',
+              airport: 'DFW',
+              userId: 'user-1',
             }),
             messageId: 'msg-1',
             receiptHandle: 'handle-1',
@@ -272,8 +265,9 @@ describe('flightPriceFetcher handler', () => {
           },
           {
             body: JSON.stringify({
-              'detail-type': 'airport.added',
-              detail: { airport: 'LAX', userId: 'user-2' },
+              type: 'airport-added',
+              airport: 'LAX',
+              userId: 'user-2',
             }),
             messageId: 'msg-2',
             receiptHandle: 'handle-2',
