@@ -204,9 +204,9 @@ export function PlannedTournamentCard({ plannedTournament, index, onTravelTypeCl
                   <div
                     className="absolute left-0 top-full mt-2 z-20 p-3 rounded-lg text-left whitespace-nowrap"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.95)',
-                      border: '1px solid var(--glass-border)',
-                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+                      background: '#1a1a1a',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
                     }}
                   >
                     {travelType === 'fly' && flightPrice ? (
