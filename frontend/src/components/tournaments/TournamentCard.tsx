@@ -1,10 +1,6 @@
 'use client';
 
-import { useState } from 'react';
 import type { Tournament } from '@/lib/types';
-import { useAuthStore } from '@/stores/authStore';
-import { useIsInWishlist, useWishlistMutations } from '@/hooks/useWishlist';
-import { LoginModal } from '@/components/auth/LoginModal';
 
 interface TournamentCardProps {
   tournament: Tournament;
@@ -12,28 +8,6 @@ interface TournamentCardProps {
 }
 
 export function TournamentCard({ tournament, index }: TournamentCardProps) {
-  const [loginModalOpen, setLoginModalOpen] = useState(false);
-  const { isAuthenticated } = useAuthStore();
-  const isInWishlist = useIsInWishlist(tournament.id);
-  const { addMutation, removeMutation } = useWishlistMutations();
-
-  const handleHeartClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (!isAuthenticated) {
-      setLoginModalOpen(true);
-      return;
-    }
-
-    if (isInWishlist) {
-      removeMutation.mutate(tournament.id);
-    } else {
-      addMutation.mutate(tournament.id);
-    }
-  };
-
-  const isLoading = addMutation.isPending || removeMutation.isPending;
   const getDaysUntil = (start: string) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -82,35 +56,6 @@ export function TournamentCard({ tournament, index }: TournamentCardProps) {
         animationDelay: `${(index || 0) * 100}ms`,
       }}
     >
-      {/* Heart/Season Button */}
-      <button
-        onClick={handleHeartClick}
-        disabled={isLoading}
-        className="absolute top-3 right-3 z-10 p-2 rounded-full transition-all duration-300 hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-        style={{
-          background: 'rgba(0, 0, 0, 0.3)',
-          backdropFilter: 'blur(8px)',
-        }}
-        aria-label={isInWishlist ? 'Remove from season' : 'Add to season'}
-      >
-        <svg
-          className="w-5 h-5 transition-all duration-300"
-          viewBox="0 0 24 24"
-          fill={isInWishlist ? '#d4af37' : 'none'}
-          stroke={isInWishlist ? '#d4af37' : 'currentColor'}
-          strokeWidth={2}
-          style={{
-            filter: isInWishlist ? 'drop-shadow(0 0 4px rgba(212, 175, 55, 0.5))' : 'none',
-          }}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
-          />
-        </svg>
-      </button>
-
       <div className="p-4 sm:p-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
         {/* DATE BLOCK - Hero Element */}
         <div className="flex-shrink-0 flex sm:block items-center gap-3 sm:gap-0">
@@ -286,13 +231,6 @@ export function TournamentCard({ tournament, index }: TournamentCardProps) {
           </div>
         </div>
       </div>
-
-      {/* Login Modal for unauthenticated users */}
-      <LoginModal
-        isOpen={loginModalOpen}
-        onClose={() => setLoginModalOpen(false)}
-        context="favorite"
-      />
     </div>
   );
 }
