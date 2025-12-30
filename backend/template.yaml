@@ -94,6 +94,9 @@ Resources:
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
       Tags:
         - Key: Project
           Value: bjj-tournament-tracker
@@ -417,6 +420,8 @@ Resources:
   # ============================================
   # Flight Price Infrastructure (Conditional)
   # ============================================
+  # NOTE: Lambda handlers (websocket.ts, flightPriceFetcher.ts) are created in Phase 3.
+  # Do not enable EnableFlightPrices=true until Phase 3 is complete.
 
   # SQS Queue for flight price fetch requests
   FlightPriceQueue:
@@ -485,6 +490,11 @@ Resources:
       Targets:
         - Id: FlightPriceQueue
           Arn: !GetAtt FlightPriceQueue.Arn
+          InputTransformer:
+            InputPathsMap:
+              airport: $.detail.airport
+              userId: $.detail.userId
+            InputTemplate: '{"type": "airport-added", "airport": "<airport>", "userId": "<userId>"}'
 
   # Allow EventBridge to send to SQS
   FlightPriceQueuePolicy:
