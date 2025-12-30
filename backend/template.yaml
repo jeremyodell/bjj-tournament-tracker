@@ -42,6 +42,26 @@ Parameters:
       - 'false'
     Description: Enable daily scheduled tournament sync
 
+  AmadeusApiKey:
+    Type: String
+    Default: ''
+    NoEcho: true
+    Description: Amadeus API Key for flight search
+
+  AmadeusApiSecret:
+    Type: String
+    Default: ''
+    NoEcho: true
+    Description: Amadeus API Secret for flight search
+
+  EnableFlightPrices:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Enable flight price fetching infrastructure
+
 Resources:
   # ============================================
   # DynamoDB Table
@@ -395,6 +415,236 @@ Resources:
           - '@aws-sdk/*'
 
   # ============================================
+  # Flight Price Infrastructure (Conditional)
+  # ============================================
+
+  # SQS Queue for flight price fetch requests
+  FlightPriceQueue:
+    Type: AWS::SQS::Queue
+    Condition: FlightPricesEnabled
+    Properties:
+      QueueName: !Sub bjj-flight-price-queue-${Stage}
+      VisibilityTimeout: 300
+      MessageRetentionPeriod: 86400
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt FlightPriceDLQ.Arn
+        maxReceiveCount: 3
+      Tags:
+        - Key: Project
+          Value: bjj-tournament-tracker
+        - Key: Environment
+          Value: !Ref Stage
+
+  FlightPriceDLQ:
+    Type: AWS::SQS::Queue
+    Condition: FlightPricesEnabled
+    Properties:
+      QueueName: !Sub bjj-flight-price-dlq-${Stage}
+      MessageRetentionPeriod: 1209600
+      Tags:
+        - Key: Project
+          Value: bjj-tournament-tracker
+        - Key: Environment
+          Value: !Ref Stage
+
+  # EventBridge for scheduled and event-driven triggers
+  FlightPriceEventBus:
+    Type: AWS::Events::EventBus
+    Condition: FlightPricesEnabled
+    Properties:
+      Name: !Sub bjj-flight-prices-${Stage}
+
+  # Daily flight price refresh rule (4 AM UTC)
+  DailyFlightPriceRule:
+    Type: AWS::Events::Rule
+    Condition: FlightPricesEnabled
+    Properties:
+      Name: !Sub daily-flight-price-fetch-${Stage}
+      EventBusName: !Ref FlightPriceEventBus
+      ScheduleExpression: cron(0 4 * * ? *)
+      State: ENABLED
+      Targets:
+        - Id: FlightPriceQueue
+          Arn: !GetAtt FlightPriceQueue.Arn
+          InputTransformer:
+            InputTemplate: '{"type": "daily-refresh"}'
+
+  # New airport added event rule
+  NewAirportRule:
+    Type: AWS::Events::Rule
+    Condition: FlightPricesEnabled
+    Properties:
+      Name: !Sub new-airport-added-${Stage}
+      EventBusName: !Ref FlightPriceEventBus
+      EventPattern:
+        source:
+          - bjj.airports
+        detail-type:
+          - airport.added
+      State: ENABLED
+      Targets:
+        - Id: FlightPriceQueue
+          Arn: !GetAtt FlightPriceQueue.Arn
+
+  # Allow EventBridge to send to SQS
+  FlightPriceQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Condition: FlightPricesEnabled
+    Properties:
+      Queues:
+        - !Ref FlightPriceQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt FlightPriceQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn:
+                  - !GetAtt DailyFlightPriceRule.Arn
+                  - !GetAtt NewAirportRule.Arn
+
+  # WebSocket API for real-time price updates
+  FlightPriceWebSocketApi:
+    Type: AWS::ApiGatewayV2::Api
+    Condition: FlightPricesEnabled
+    Properties:
+      Name: !Sub bjj-websocket-${Stage}
+      ProtocolType: WEBSOCKET
+      RouteSelectionExpression: $request.body.action
+      Tags:
+        Project: bjj-tournament-tracker
+        Environment: !Ref Stage
+
+  FlightPriceWebSocketStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Condition: FlightPricesEnabled
+    Properties:
+      ApiId: !Ref FlightPriceWebSocketApi
+      StageName: !Ref Stage
+      AutoDeploy: true
+
+  # WebSocket Lambda Handler
+  WebSocketFunction:
+    Type: AWS::Serverless::Function
+    Condition: FlightPricesEnabled
+    Properties:
+      FunctionName: !Sub bjj-tournament-tracker-websocket-${Stage}
+      Handler: dist/handlers/websocket.handler
+      CodeUri: .
+      Description: Handles WebSocket connect/disconnect for flight price updates
+      Timeout: 30
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TournamentsTable
+      Environment:
+        Variables:
+          WEBSOCKET_ENDPOINT: !Sub https://${FlightPriceWebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/websocket.ts
+        External:
+          - '@aws-sdk/*'
+
+  # WebSocket Routes
+  WebSocketConnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Condition: FlightPricesEnabled
+    Properties:
+      ApiId: !Ref FlightPriceWebSocketApi
+      RouteKey: $connect
+      AuthorizationType: NONE
+      Target: !Sub integrations/${WebSocketConnectIntegration}
+
+  WebSocketDisconnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Condition: FlightPricesEnabled
+    Properties:
+      ApiId: !Ref FlightPriceWebSocketApi
+      RouteKey: $disconnect
+      Target: !Sub integrations/${WebSocketDisconnectIntegration}
+
+  WebSocketConnectIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Condition: FlightPricesEnabled
+    Properties:
+      ApiId: !Ref FlightPriceWebSocketApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${WebSocketFunction.Arn}/invocations
+
+  WebSocketDisconnectIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Condition: FlightPricesEnabled
+    Properties:
+      ApiId: !Ref FlightPriceWebSocketApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${WebSocketFunction.Arn}/invocations
+
+  WebSocketPermission:
+    Type: AWS::Lambda::Permission
+    Condition: FlightPricesEnabled
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref WebSocketFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${FlightPriceWebSocketApi}/*
+
+  # Flight Price Fetcher Lambda (SQS triggered)
+  FlightPriceFetcherFunction:
+    Type: AWS::Serverless::Function
+    Condition: FlightPricesEnabled
+    Properties:
+      FunctionName: !Sub bjj-tournament-tracker-flight-fetcher-${Stage}
+      Handler: dist/handlers/flightPriceFetcher.handler
+      CodeUri: .
+      Description: Fetches flight prices from Amadeus API
+      Timeout: 300
+      MemorySize: 512
+      Environment:
+        Variables:
+          AMADEUS_API_KEY: !Ref AmadeusApiKey
+          AMADEUS_API_SECRET: !Ref AmadeusApiSecret
+          WEBSOCKET_ENDPOINT: !Sub https://${FlightPriceWebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
+          EVENT_BUS_NAME: !Ref FlightPriceEventBus
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TournamentsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - execute-api:ManageConnections
+              Resource: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${FlightPriceWebSocketApi}/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: !GetAtt FlightPriceEventBus.Arn
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt FlightPriceQueue.Arn
+            BatchSize: 1
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/flightPriceFetcher.ts
+        External:
+          - '@aws-sdk/*'
+
+  # ============================================
   # CloudWatch Alarms (Optional)
   # ============================================
   TournamentsFunctionErrorAlarm:
@@ -435,6 +685,9 @@ Conditions:
   IsProd: !Equals
     - !Ref Stage
     - prod
+  FlightPricesEnabled: !Equals
+    - !Ref EnableFlightPrices
+    - 'true'
 
 Outputs:
   TournamentsApiUrl:
@@ -490,3 +743,21 @@ Outputs:
     Value: !Sub https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com
     Export:
       Name: !Sub ${AWS::StackName}-CognitoDomain
+
+  # Flight Price Infrastructure Outputs (Conditional)
+  FlightPriceWebSocketUrl:
+    Condition: FlightPricesEnabled
+    Description: WebSocket URL for flight price updates
+    Value: !Sub wss://${FlightPriceWebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
+    Export:
+      Name: !Sub ${AWS::StackName}-WebSocketUrl
+
+  FlightPriceQueueUrl:
+    Condition: FlightPricesEnabled
+    Description: SQS Queue URL for flight price requests
+    Value: !Ref FlightPriceQueue
+
+  FlightPriceEventBusArn:
+    Condition: FlightPricesEnabled
+    Description: EventBridge Event Bus ARN for flight prices
+    Value: !GetAtt FlightPriceEventBus.Arn
