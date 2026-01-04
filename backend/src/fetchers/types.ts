@@ -73,3 +73,34 @@ export interface JJWLRosterAthlete {
   weight: string;
   gender: string;
 }
+
+// IBJJF Academy from API
+export interface IBJJFAcademy {
+  id: number;
+  name: string;
+  country: string;
+  countryCode: string;
+  city: string;
+  address: string;
+  federation: string;
+  site: string;
+  responsible: string;
+}
+
+// IBJJF API response structure
+export interface IBJJFAcademiesResponse {
+  data: IBJJFAcademy[];
+  totalRecords: number;
+  filteredRecords: number;
+}
+
+// Extended normalized gym with IBJJF fields
+export interface IBJJFNormalizedGym extends NormalizedGym {
+  country?: string;
+  countryCode?: string;
+  city?: string;
+  address?: string;
+  federation?: string;
+  website?: string;
+  responsible?: string;
+}
