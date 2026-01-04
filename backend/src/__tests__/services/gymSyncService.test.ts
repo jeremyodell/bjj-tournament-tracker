@@ -3,21 +3,24 @@ import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 // Mock the dependencies before importing the service
 jest.mock('../../fetchers/jjwlGymFetcher.js');
 jest.mock('../../fetchers/jjwlRosterFetcher.js');
+jest.mock('../../fetchers/ibjjfGymFetcher.js');
 jest.mock('../../db/gymQueries.js');
 jest.mock('../../db/queries.js');
 
 import {
   syncJJWLGyms,
+  syncIBJJFGyms,
   getActiveGymIds,
   getUpcomingTournaments,
   syncGymRoster,
 } from '../../services/gymSyncService.js';
 import * as jjwlGymFetcher from '../../fetchers/jjwlGymFetcher.js';
 import * as jjwlRosterFetcher from '../../fetchers/jjwlRosterFetcher.js';
+import * as ibjjfGymFetcher from '../../fetchers/ibjjfGymFetcher.js';
 import * as gymQueries from '../../db/gymQueries.js';
 import * as queries from '../../db/queries.js';
-import type { NormalizedGym } from '../../fetchers/types.js';
-import type { TournamentItem } from '../../db/types.js';
+import type { NormalizedGym, IBJJFNormalizedGym } from '../../fetchers/types.js';
+import type { TournamentItem, GymSyncMetaItem } from '../../db/types.js';
 
 describe('gymSyncService', () => {
   beforeEach(() => {
@@ -295,6 +298,130 @@ describe('gymSyncService', () => {
 
       expect(result.success).toBe(true);
       expect(result.athleteCount).toBe(0);
+    });
+  });
+
+  describe('syncIBJJFGyms', () => {
+    const mockSyncMeta: GymSyncMetaItem = {
+      PK: 'GYMSYNC#IBJJF',
+      SK: 'META',
+      org: 'IBJJF',
+      totalRecords: 8573,
+      lastSyncAt: '2026-01-01T00:00:00Z',
+      lastChangeAt: '2026-01-01T00:00:00Z',
+    };
+
+    it('should skip sync when totalRecords unchanged', async () => {
+      const fetchCountMock = jest.spyOn(ibjjfGymFetcher, 'fetchIBJJFGymCount');
+      const fetchAllMock = jest.spyOn(ibjjfGymFetcher, 'fetchAllIBJJFGyms');
+      const getSyncMetaMock = jest.spyOn(gymQueries, 'getGymSyncMeta');
+
+      fetchCountMock.mockResolvedValue(8573);
+      getSyncMetaMock.mockResolvedValue(mockSyncMeta);
+
+      const result = await syncIBJJFGyms();
+
+      expect(result.skipped).toBe(true);
+      expect(result.fetched).toBe(0);
+      expect(result.saved).toBe(0);
+      expect(fetchAllMock).not.toHaveBeenCalled();
+    });
+
+    it('should perform full sync when totalRecords changed', async () => {
+      const mockGyms: IBJJFNormalizedGym[] = [
+        { org: 'IBJJF', externalId: '1', name: 'Gym 1' },
+        { org: 'IBJJF', externalId: '2', name: 'Gym 2' },
+      ];
+
+      const fetchCountMock = jest.spyOn(ibjjfGymFetcher, 'fetchIBJJFGymCount');
+      const fetchAllMock = jest.spyOn(ibjjfGymFetcher, 'fetchAllIBJJFGyms');
+      const getSyncMetaMock = jest.spyOn(gymQueries, 'getGymSyncMeta');
+      const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
+      const updateSyncMetaMock = jest.spyOn(gymQueries, 'updateGymSyncMeta');
+
+      fetchCountMock.mockResolvedValue(8600); // Changed from 8573
+      getSyncMetaMock.mockResolvedValue(mockSyncMeta);
+      fetchAllMock.mockResolvedValue(mockGyms);
+      batchUpsertMock.mockResolvedValue(2);
+      updateSyncMetaMock.mockResolvedValue(undefined);
+
+      const result = await syncIBJJFGyms();
+
+      expect(result.skipped).toBe(false);
+      expect(result.fetched).toBe(2);
+      expect(result.saved).toBe(2);
+      expect(fetchAllMock).toHaveBeenCalled();
+      expect(updateSyncMetaMock).toHaveBeenCalledWith('IBJJF', 8600);
+    });
+
+    it('should perform full sync on first run (no previous meta)', async () => {
+      const mockGyms: IBJJFNormalizedGym[] = [
+        { org: 'IBJJF', externalId: '1', name: 'Gym 1' },
+      ];
+
+      const fetchCountMock = jest.spyOn(ibjjfGymFetcher, 'fetchIBJJFGymCount');
+      const fetchAllMock = jest.spyOn(ibjjfGymFetcher, 'fetchAllIBJJFGyms');
+      const getSyncMetaMock = jest.spyOn(gymQueries, 'getGymSyncMeta');
+      const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
+      const updateSyncMetaMock = jest.spyOn(gymQueries, 'updateGymSyncMeta');
+
+      fetchCountMock.mockResolvedValue(8573);
+      getSyncMetaMock.mockResolvedValue(null); // First sync
+      fetchAllMock.mockResolvedValue(mockGyms);
+      batchUpsertMock.mockResolvedValue(1);
+      updateSyncMetaMock.mockResolvedValue(undefined);
+
+      const result = await syncIBJJFGyms();
+
+      expect(result.skipped).toBe(false);
+      expect(fetchAllMock).toHaveBeenCalled();
+    });
+
+    it('should force sync even when totalRecords unchanged', async () => {
+      const mockGyms: IBJJFNormalizedGym[] = [];
+
+      const fetchCountMock = jest.spyOn(ibjjfGymFetcher, 'fetchIBJJFGymCount');
+      const fetchAllMock = jest.spyOn(ibjjfGymFetcher, 'fetchAllIBJJFGyms');
+      const getSyncMetaMock = jest.spyOn(gymQueries, 'getGymSyncMeta');
+      const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
+      const updateSyncMetaMock = jest.spyOn(gymQueries, 'updateGymSyncMeta');
+
+      fetchCountMock.mockResolvedValue(8573); // Same as meta
+      getSyncMetaMock.mockResolvedValue(mockSyncMeta);
+      fetchAllMock.mockResolvedValue(mockGyms);
+      batchUpsertMock.mockResolvedValue(0);
+      updateSyncMetaMock.mockResolvedValue(undefined);
+
+      const result = await syncIBJJFGyms({ forceSync: true });
+
+      expect(result.skipped).toBe(false);
+      expect(fetchAllMock).toHaveBeenCalled();
+    });
+
+    it('should return error on API failure', async () => {
+      const fetchCountMock = jest.spyOn(ibjjfGymFetcher, 'fetchIBJJFGymCount');
+
+      fetchCountMock.mockRejectedValue(new Error('API down'));
+
+      const result = await syncIBJJFGyms();
+
+      expect(result.error).toBe('API down');
+      expect(result.skipped).toBe(false);
+      expect(result.fetched).toBe(0);
+      expect(result.saved).toBe(0);
+    });
+
+    it('should include duration in result', async () => {
+      const fetchCountMock = jest.spyOn(ibjjfGymFetcher, 'fetchIBJJFGymCount');
+      const getSyncMetaMock = jest.spyOn(gymQueries, 'getGymSyncMeta');
+
+      fetchCountMock.mockResolvedValue(8573);
+      getSyncMetaMock.mockResolvedValue(mockSyncMeta);
+
+      const result = await syncIBJJFGyms();
+
+      expect(result.duration).toBeDefined();
+      expect(typeof result.duration).toBe('number');
     });
   });
 });

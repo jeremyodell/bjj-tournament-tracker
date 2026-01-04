@@ -1,6 +1,16 @@
 import { fetchJJWLGyms } from '../fetchers/jjwlGymFetcher.js';
 import { fetchJJWLRoster } from '../fetchers/jjwlRosterFetcher.js';
-import { batchUpsertGyms, upsertGymRoster, getSourceGym } from '../db/gymQueries.js';
+import {
+  fetchIBJJFGymCount,
+  fetchAllIBJJFGyms,
+} from '../fetchers/ibjjfGymFetcher.js';
+import {
+  batchUpsertGyms,
+  upsertGymRoster,
+  getSourceGym,
+  getGymSyncMeta,
+  updateGymSyncMeta,
+} from '../db/gymQueries.js';
 import { queryTournaments } from '../db/queries.js';
 import type { TournamentItem } from '../db/types.js';
 
@@ -19,6 +29,19 @@ export interface RosterSyncResult {
 export interface TournamentQueryResult {
   tournaments: TournamentItem[];
   error?: string;
+}
+
+export interface IBJJFGymSyncResult {
+  skipped: boolean;
+  fetched: number;
+  saved: number;
+  duration: number;
+  error?: string;
+}
+
+export interface IBJJFSyncOptions {
+  forceSync?: boolean;
+  onProgress?: (current: number, total: number) => void;
 }
 
 /**
@@ -40,6 +63,74 @@ export async function syncJJWLGyms(): Promise<GymSyncResult> {
     return {
       fetched: 0,
       saved: 0,
+      error: message,
+    };
+  }
+}
+
+/**
+ * Sync IBJJF gyms with change detection.
+ * Skips full sync if totalRecords hasn't changed (unless forceSync=true).
+ */
+export async function syncIBJJFGyms(
+  options: IBJJFSyncOptions = {}
+): Promise<IBJJFGymSyncResult> {
+  const { forceSync = false, onProgress } = options;
+  const startTime = Date.now();
+
+  try {
+    // Get current count from API
+    const totalRecords = await fetchIBJJFGymCount();
+
+    // Get previous sync metadata
+    const meta = await getGymSyncMeta('IBJJF');
+    const previousTotal = meta?.totalRecords;
+
+    // Skip if unchanged (unless force)
+    if (!forceSync && meta && previousTotal === totalRecords) {
+      console.log(
+        `[GymSyncService] IBJJF unchanged (${totalRecords} records), skipping sync`
+      );
+      return {
+        skipped: true,
+        fetched: 0,
+        saved: 0,
+        duration: Date.now() - startTime,
+      };
+    }
+
+    console.log(
+      `[GymSyncService] IBJJF sync starting: ${previousTotal ?? 0} -> ${totalRecords} records`
+    );
+
+    // Fetch all gyms
+    const gyms = await fetchAllIBJJFGyms(onProgress);
+
+    // Batch upsert to database
+    const saved = await batchUpsertGyms(gyms);
+
+    // Update sync metadata
+    await updateGymSyncMeta('IBJJF', totalRecords);
+
+    const duration = Date.now() - startTime;
+    console.log(
+      `[GymSyncService] IBJJF sync complete: ${gyms.length} fetched, ${saved} saved in ${duration}ms`
+    );
+
+    return {
+      skipped: false,
+      fetched: gyms.length,
+      saved,
+      duration,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[GymSyncService] IBJJF sync failed:', message);
+    return {
+      skipped: false,
+      fetched: 0,
+      saved: 0,
+      duration: Date.now() - startTime,
       error: message,
     };
   }
