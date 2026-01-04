@@ -2,6 +2,7 @@ import { fetchIBJJFTournaments } from '../fetchers/ibjjfFetcher.js';
 import { fetchJJWLTournaments } from '../fetchers/jjwlFetcher.js';
 import { upsertTournaments } from '../db/queries.js';
 import { enrichTournamentsWithGeocode, type EnrichmentStats } from './venueEnrichment.js';
+import { syncJJWLGyms } from './gymSyncService.js';
 import type { NormalizedTournament } from '../fetchers/types.js';
 
 export interface SourceResult {
@@ -14,6 +15,7 @@ export interface SourceResult {
 export interface SyncResult {
   ibjjf: SourceResult;
   jjwl: SourceResult;
+  gyms?: SourceResult;
 }
 
 export interface SyncOptions {
@@ -58,10 +60,17 @@ async function fetchSource(
 export async function syncAllTournaments(
   options: SyncOptions = {}
 ): Promise<SyncResult> {
-  const [ibjjf, jjwl] = await Promise.all([
+  const [ibjjf, jjwl, gymResult] = await Promise.all([
     fetchSource('IBJJF', fetchIBJJFTournaments, options),
     fetchSource('JJWL', fetchJJWLTournaments, options),
+    syncJJWLGyms(),
   ]);
 
-  return { ibjjf, jjwl };
+  const gyms: SourceResult = {
+    fetched: gymResult.fetched,
+    saved: gymResult.saved,
+    error: gymResult.error,
+  };
+
+  return { ibjjf, jjwl, gyms };
 }
