@@ -64,3 +64,12 @@ export interface NormalizedGym {
   externalId: string;
   name: string;
 }
+
+// JJWL Roster athlete from API
+export interface JJWLRosterAthlete {
+  name: string;
+  belt: string;
+  ageDiv: string;
+  weight: string;
+  gender: string;
+}

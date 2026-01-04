@@ -27,6 +27,16 @@ export const buildAirportPK = (iataCode: string): string =>
 export const buildWsConnPK = (connectionId: string): string =>
   `WSCONN#${connectionId}`;
 
+// Gym key builders
+export const buildSourceGymPK = (org: string, externalId: string): string =>
+  `SRCGYM#${org}#${externalId}`;
+
+export const buildSourceGymGSI1SK = (org: string, name: string): string =>
+  `${org}#${name}`;
+
+export const buildGymRosterSK = (gymExternalId: string): string =>
+  `GYMROSTER#${gymExternalId}`;
+
 // Entity types
 export interface TournamentItem {
   PK: string; // TOURN#<org>#<externalId>
@@ -152,6 +162,37 @@ export interface WsConnectionItem {
   ttl: number;
 }
 
+// Source gym entity (from JJWL, IBJJF, etc.)
+export interface SourceGymItem {
+  PK: string; // SRCGYM#{org}#{externalId}
+  SK: 'META';
+  GSI1PK: 'GYMS';
+  GSI1SK: string; // {org}#{name}
+  org: 'JJWL' | 'IBJJF';
+  externalId: string;
+  name: string;
+  masterGymId: string | null; // Future: links to canonical gym
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Cached roster for a gym at a tournament
+export interface TournamentGymRosterItem {
+  PK: string; // TOURN#{org}#{tournamentId}
+  SK: string; // GYMROSTER#{gymExternalId}
+  gymExternalId: string;
+  gymName: string;
+  athletes: Array<{
+    name: string;
+    belt: string;
+    ageDiv: string;
+    weight: string;
+    gender: string;
+  }>;
+  athleteCount: number;
+  fetchedAt: string;
+}
+
 export type DynamoDBItem =
   | TournamentItem
   | UserProfileItem
@@ -160,4 +201,6 @@ export type DynamoDBItem =
   | VenueItem
   | FlightPriceItem
   | KnownAirportItem
-  | WsConnectionItem;
+  | WsConnectionItem
+  | SourceGymItem
+  | TournamentGymRosterItem;
