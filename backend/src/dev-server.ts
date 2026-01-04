@@ -132,6 +132,11 @@ app.get('/api/tournaments/:id', (req, res, next) => {
   next();
 }, wrapHandler(tournamentsHandler));
 
+// Gym routes
+app.get('/api/gyms', wrapHandler(gymsHandler));
+app.get('/api/gyms/:org/:externalId', wrapHandler(gymsHandler));
+app.get('/api/gyms/:org/:externalId/roster/:tournamentId', wrapHandler(gymsHandler));
+
 // Health check
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
