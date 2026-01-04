@@ -8,9 +8,10 @@ import {
   getGymRoster,
   getTournamentRosters,
   batchUpsertGyms,
+  getGymSyncMeta,
 } from '../../db/gymQueries.js';
 import { docClient } from '../../db/client.js';
-import type { SourceGymItem, TournamentGymRosterItem } from '../../db/types.js';
+import type { SourceGymItem, TournamentGymRosterItem, GymSyncMetaItem } from '../../db/types.js';
 import type { NormalizedGym, JJWLRosterAthlete } from '../../fetchers/types.js';
 
 // Mock the docClient
@@ -437,6 +438,48 @@ describe('gymQueries', () => {
 
       expect(count).toBe(100);
       expect(mockSend).toHaveBeenCalledTimes(100);
+    });
+  });
+
+  describe('getGymSyncMeta', () => {
+    it('should return null when no sync meta exists', async () => {
+      mockSend.mockResolvedValueOnce({ Item: undefined } as never);
+
+      const result = await getGymSyncMeta('IBJJF');
+
+      expect(result).toBeNull();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const input = mockSend.mock.calls[0][0].input as any;
+      expect(input.Key.PK).toBe('GYMSYNC#IBJJF');
+      expect(input.Key.SK).toBe('META');
+    });
+
+    it('should return GymSyncMetaItem when it exists', async () => {
+      const mockItem: GymSyncMetaItem = {
+        PK: 'GYMSYNC#IBJJF',
+        SK: 'META',
+        org: 'IBJJF',
+        totalRecords: 12500,
+        lastSyncAt: '2026-01-01T00:00:00.000Z',
+        lastChangeAt: '2026-01-01T00:00:00.000Z',
+      };
+      mockSend.mockResolvedValueOnce({ Item: mockItem } as never);
+
+      const result = await getGymSyncMeta('IBJJF');
+
+      expect(result).toEqual(mockItem);
+    });
+
+    it('should query with correct key structure for JJWL', async () => {
+      mockSend.mockResolvedValueOnce({ Item: undefined } as never);
+
+      await getGymSyncMeta('JJWL');
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const input = mockSend.mock.calls[0][0].input as any;
+      expect(input.TableName).toBe('bjj-tournament-tracker-test');
+      expect(input.Key.PK).toBe('GYMSYNC#JJWL');
+      expect(input.Key.SK).toBe('META');
     });
   });
 });
