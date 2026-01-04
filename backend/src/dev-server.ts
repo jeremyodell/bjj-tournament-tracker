@@ -19,6 +19,7 @@ process.env.AWS_SECRET_ACCESS_KEY = 'local';
 // Import handlers dynamically after setting env vars
 const { handler: tournamentsHandler } = await import('./handlers/tournaments.js');
 const { handler: gymsHandler } = await import('./handlers/gyms.js');
+const { syncIBJJFGyms } = await import('./services/gymSyncService.js');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -137,6 +138,37 @@ app.get('/api/gyms', wrapHandler(gymsHandler));
 app.get('/api/gyms/:org/:externalId', wrapHandler(gymsHandler));
 app.get('/api/gyms/:org/:externalId/roster/:tournamentId', wrapHandler(gymsHandler));
 
+// Gym sync route (manual trigger for local testing)
+app.post('/gym-sync', async (req, res) => {
+  try {
+    const forceSync = req.query.force === 'true';
+    console.log(`[GymSync] Manual sync triggered (force=${forceSync})`);
+
+    const result = await syncIBJJFGyms({ forceSync });
+
+    if (result.error) {
+      res.status(500).json({
+        success: false,
+        error: result.error,
+        result,
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      result,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[GymSync] Sync failed:', message);
+    res.status(500).json({
+      success: false,
+      error: message,
+    });
+  }
+});
+
 // Health check
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -163,6 +195,7 @@ app.listen(PORT, () => {
 ║    GET /api/gyms                   Search gyms             ║
 ║    GET /api/gyms/:org/:id          Get gym details         ║
 ║    GET /api/gyms/:org/:id/roster/:tid  Get gym roster      ║
+║    POST /gym-sync                  Sync IBJJF gyms         ║
 ╚════════════════════════════════════════════════════════════╝
   `);
 });
