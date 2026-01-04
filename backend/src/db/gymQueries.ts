@@ -5,8 +5,9 @@ import {
   buildSourceGymGSI1SK,
   buildTournamentPK,
   buildGymRosterSK,
+  buildGymSyncMetaPK,
 } from './types.js';
-import type { SourceGymItem, TournamentGymRosterItem } from './types.js';
+import type { SourceGymItem, TournamentGymRosterItem, GymSyncMetaItem } from './types.js';
 import type { NormalizedGym, JJWLRosterAthlete } from '../fetchers/types.js';
 
 /**
@@ -186,4 +187,54 @@ export async function batchUpsertGyms(gyms: NormalizedGym[]): Promise<number> {
     count++;
   }
   return count;
+}
+
+/**
+ * Get gym sync metadata for an org (for change detection)
+ */
+export async function getGymSyncMeta(
+  org: 'JJWL' | 'IBJJF'
+): Promise<GymSyncMetaItem | null> {
+  const result = await docClient.send(
+    new GetCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        PK: buildGymSyncMetaPK(org),
+        SK: 'META',
+      },
+    })
+  );
+
+  return (result.Item as GymSyncMetaItem) || null;
+}
+
+/**
+ * Update gym sync metadata (upsert)
+ * - Always updates lastSyncAt
+ * - Only updates lastChangeAt when totalRecords differs from previous value
+ */
+export async function updateGymSyncMeta(
+  org: 'JJWL' | 'IBJJF',
+  totalRecords: number
+): Promise<void> {
+  const now = new Date().toISOString();
+  const existing = await getGymSyncMeta(org);
+
+  const recordsChanged = !existing || existing.totalRecords !== totalRecords;
+
+  const item: GymSyncMetaItem = {
+    PK: buildGymSyncMetaPK(org),
+    SK: 'META',
+    org,
+    totalRecords,
+    lastSyncAt: now,
+    lastChangeAt: recordsChanged ? now : existing.lastChangeAt,
+  };
+
+  await docClient.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: item,
+    })
+  );
 }

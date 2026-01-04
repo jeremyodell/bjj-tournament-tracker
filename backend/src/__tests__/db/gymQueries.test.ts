@@ -8,9 +8,12 @@ import {
   getGymRoster,
   getTournamentRosters,
   batchUpsertGyms,
+  getGymSyncMeta,
+  updateGymSyncMeta,
 } from '../../db/gymQueries.js';
+import { PutCommand } from '@aws-sdk/lib-dynamodb';
 import { docClient } from '../../db/client.js';
-import type { SourceGymItem, TournamentGymRosterItem } from '../../db/types.js';
+import type { SourceGymItem, TournamentGymRosterItem, GymSyncMetaItem } from '../../db/types.js';
 import type { NormalizedGym, JJWLRosterAthlete } from '../../fetchers/types.js';
 
 // Mock the docClient
@@ -437,6 +440,133 @@ describe('gymQueries', () => {
 
       expect(count).toBe(100);
       expect(mockSend).toHaveBeenCalledTimes(100);
+    });
+  });
+
+  describe('getGymSyncMeta', () => {
+    it('should return null when no sync meta exists', async () => {
+      mockSend.mockResolvedValueOnce({ Item: undefined } as never);
+
+      const result = await getGymSyncMeta('IBJJF');
+
+      expect(result).toBeNull();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const input = mockSend.mock.calls[0][0].input as any;
+      expect(input.Key.PK).toBe('GYMSYNC#IBJJF');
+      expect(input.Key.SK).toBe('META');
+    });
+
+    it('should return GymSyncMetaItem when it exists', async () => {
+      const mockItem: GymSyncMetaItem = {
+        PK: 'GYMSYNC#IBJJF',
+        SK: 'META',
+        org: 'IBJJF',
+        totalRecords: 12500,
+        lastSyncAt: '2026-01-01T00:00:00.000Z',
+        lastChangeAt: '2026-01-01T00:00:00.000Z',
+      };
+      mockSend.mockResolvedValueOnce({ Item: mockItem } as never);
+
+      const result = await getGymSyncMeta('IBJJF');
+
+      expect(result).toEqual(mockItem);
+    });
+
+    it('should query with correct key structure for JJWL', async () => {
+      mockSend.mockResolvedValueOnce({ Item: undefined } as never);
+
+      await getGymSyncMeta('JJWL');
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const input = mockSend.mock.calls[0][0].input as any;
+      expect(input.TableName).toBe('bjj-tournament-tracker-test');
+      expect(input.Key.PK).toBe('GYMSYNC#JJWL');
+      expect(input.Key.SK).toBe('META');
+    });
+  });
+
+  describe('updateGymSyncMeta', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-01-04T12:00:00.000Z'));
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('creates new record on first sync (no existing record)', async () => {
+      mockSend
+        .mockResolvedValueOnce({ Item: undefined } as never) // GET returns nothing
+        .mockResolvedValueOnce({} as never); // PUT succeeds
+
+      await updateGymSyncMeta('IBJJF', 12500);
+
+      const putCall = mockSend.mock.calls[1][0];
+      expect(putCall).toBeInstanceOf(PutCommand);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((putCall as any).input.Item).toEqual({
+        PK: 'GYMSYNC#IBJJF',
+        SK: 'META',
+        org: 'IBJJF',
+        totalRecords: 12500,
+        lastSyncAt: '2026-01-04T12:00:00.000Z',
+        lastChangeAt: '2026-01-04T12:00:00.000Z',
+      });
+    });
+
+    it('updates lastChangeAt when totalRecords changes', async () => {
+      const existingItem: GymSyncMetaItem = {
+        PK: 'GYMSYNC#IBJJF',
+        SK: 'META',
+        org: 'IBJJF',
+        totalRecords: 12000,
+        lastSyncAt: '2026-01-01T00:00:00.000Z',
+        lastChangeAt: '2026-01-01T00:00:00.000Z',
+      };
+      mockSend
+        .mockResolvedValueOnce({ Item: existingItem } as never)
+        .mockResolvedValueOnce({} as never);
+
+      await updateGymSyncMeta('IBJJF', 12500);
+
+      const putCall = mockSend.mock.calls[1][0];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((putCall as any).input.Item).toEqual({
+        PK: 'GYMSYNC#IBJJF',
+        SK: 'META',
+        org: 'IBJJF',
+        totalRecords: 12500,
+        lastSyncAt: '2026-01-04T12:00:00.000Z',
+        lastChangeAt: '2026-01-04T12:00:00.000Z',
+      });
+    });
+
+    it('preserves lastChangeAt when totalRecords unchanged', async () => {
+      const existingItem: GymSyncMetaItem = {
+        PK: 'GYMSYNC#IBJJF',
+        SK: 'META',
+        org: 'IBJJF',
+        totalRecords: 12500,
+        lastSyncAt: '2026-01-01T00:00:00.000Z',
+        lastChangeAt: '2025-12-15T00:00:00.000Z',
+      };
+      mockSend
+        .mockResolvedValueOnce({ Item: existingItem } as never)
+        .mockResolvedValueOnce({} as never);
+
+      await updateGymSyncMeta('IBJJF', 12500);
+
+      const putCall = mockSend.mock.calls[1][0];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((putCall as any).input.Item).toEqual({
+        PK: 'GYMSYNC#IBJJF',
+        SK: 'META',
+        org: 'IBJJF',
+        totalRecords: 12500,
+        lastSyncAt: '2026-01-04T12:00:00.000Z',
+        lastChangeAt: '2025-12-15T00:00:00.000Z',
+      });
     });
   });
 });
