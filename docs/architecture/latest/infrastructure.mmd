@@ -1,0 +1,141 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#FF9900', 'primaryTextColor': '#232F3E', 'primaryBorderColor': '#232F3E', 'lineColor': '#6B7280', 'secondaryColor': '#10B981', 'tertiaryColor': '#3B82F6' }}}%%
+
+flowchart TB
+    subgraph Internet["🌐 Internet"]
+        Users["👥 Users"]
+        DNS["📡 DNS\nbjjcomps.com"]
+    end
+
+    subgraph Vercel["☁️ Vercel"]
+        direction TB
+        CDN["🚀 Edge Network\nGlobal CDN"]
+        NextApp["⚛️ Next.js 15\nApp Router + SSR"]
+        VercelEnv["🔑 Env Variables\nCognito, API URLs"]
+    end
+
+    subgraph AWSRegion["☁️ AWS us-east-1"]
+        subgraph VPC["🔒 Default VPC"]
+            subgraph APIGateway["📡 API Gateway"]
+                RestAPI["REST API\nbjj-tournament-tracker-api-{stage}"]
+                WebSocketAPI["WebSocket API\nbjj-websocket-{stage}"]
+                CorsConfig["CORS: Allow *"]
+                RateLimiting["Rate Limit: 60/sec\nBurst: 100"]
+            end
+
+            subgraph Cognito["🔐 AWS Cognito"]
+                UserPool["User Pool\nbjj-tournament-tracker-users-{stage}"]
+                ClientApp["App Client\nNo Secret (SPA)"]
+                HostedUI["Hosted UI\nOAuth Flows"]
+                GoogleIdP["Google Identity Provider"]
+            end
+
+            subgraph Compute["⚡ Lambda Functions (Node.js 20)"]
+                TournamentsFn["📅 tournaments\n256MB / 30s"]
+                SyncFn["🔄 sync\n1536MB / 180s\nMakefile Build"]
+                WishlistFn["❤️ wishlist\n256MB / 30s"]
+                AthletesFn["🥋 athletes\n256MB / 30s"]
+                FlightPricesFn["✈️ flight-prices\n256MB / 30s"]
+                AirportsFn["🛫 airports\n256MB / 30s"]
+                WebSocketFn["🔌 websocket\n256MB / 30s"]
+                FlightFetcherFn["📊 flight-fetcher\n512MB / 300s"]
+            end
+
+            subgraph Storage["🗄️ Storage"]
+                DynamoDB["DynamoDB\nbjj-tournament-tracker-{stage}\nPAY_PER_REQUEST\nTTL Enabled"]
+                GSI1["GSI1 Index\nAlternate Access Patterns"]
+            end
+
+            subgraph EventDriven["📬 Event-Driven (Conditional)"]
+                EventBus["EventBridge\nbjj-flight-prices-{stage}"]
+                FlightQueue["SQS Queue\n5min visibility\n24h retention"]
+                FlightDLQ["Dead Letter Queue\n14d retention"]
+                DailyRule["Daily CRON\n4 AM UTC"]
+                AirportRule["Event Rule\nairport.added"]
+            end
+        end
+
+        subgraph Monitoring["📊 Monitoring (Prod Only)"]
+            TournamentAlarm["CloudWatch Alarm\ntournaments errors"]
+            SyncAlarm["CloudWatch Alarm\nsync errors"]
+        end
+    end
+
+    subgraph ExternalServices["🌍 External Services"]
+        IBJJFSite["IBJJF.com\nCalendar API"]
+        JJWLSite["JJWorldLeague.com\nEvents API"]
+        AmadeusAPI["Amadeus API\nFlight Search"]
+        GoogleMapsAPI["Google Maps API\nGeocoding"]
+        GoogleOAuth["Google OAuth\nIdentity Provider"]
+    end
+
+    %% User Flow
+    Users --> DNS
+    DNS --> CDN
+    CDN --> NextApp
+    NextApp --> VercelEnv
+
+    %% Frontend to AWS
+    NextApp --> RestAPI
+    NextApp --> WebSocketAPI
+    NextApp --> UserPool
+
+    %% API Gateway to Lambda
+    RestAPI --> TournamentsFn
+    RestAPI --> WishlistFn
+    RestAPI --> AthletesFn
+    RestAPI --> FlightPricesFn
+    RestAPI --> AirportsFn
+    WebSocketAPI --> WebSocketFn
+
+    %% Auth
+    UserPool --> ClientApp
+    ClientApp --> HostedUI
+    HostedUI --> GoogleIdP
+    GoogleIdP --> GoogleOAuth
+    UserPool -.->|JWT Auth| RestAPI
+
+    %% Lambda to Storage
+    TournamentsFn --> DynamoDB
+    SyncFn --> DynamoDB
+    WishlistFn --> DynamoDB
+    AthletesFn --> DynamoDB
+    FlightPricesFn --> DynamoDB
+    WebSocketFn --> DynamoDB
+    FlightFetcherFn --> DynamoDB
+    DynamoDB --> GSI1
+
+    %% Sync External
+    SyncFn --> IBJJFSite
+    SyncFn --> JJWLSite
+    SyncFn --> GoogleMapsAPI
+
+    %% Event-Driven Flight Prices
+    AirportsFn --> EventBus
+    EventBus --> FlightQueue
+    DailyRule --> FlightQueue
+    AirportRule --> FlightQueue
+    FlightQueue --> FlightFetcherFn
+    FlightQueue --> FlightDLQ
+    FlightFetcherFn --> AmadeusAPI
+    FlightFetcherFn --> WebSocketAPI
+
+    %% Monitoring
+    TournamentsFn --> TournamentAlarm
+    SyncFn --> SyncAlarm
+
+    %% Styling
+    classDef vercel fill:#000,stroke:#fff,color:#fff
+    classDef aws fill:#FF9900,stroke:#232F3E,color:#232F3E
+    classDef lambda fill:#FF9900,stroke:#232F3E,color:#000
+    classDef dynamo fill:#4053D6,stroke:#2D3748,color:#fff
+    classDef cognito fill:#DD344C,stroke:#8B0000,color:#fff
+    classDef external fill:#10B981,stroke:#059669,color:#fff
+    classDef events fill:#FF4F8B,stroke:#C41E3A,color:#fff
+
+    class CDN,NextApp,VercelEnv vercel
+    class RestAPI,WebSocketAPI,CorsConfig,RateLimiting aws
+    class TournamentsFn,SyncFn,WishlistFn,AthletesFn,FlightPricesFn,AirportsFn,WebSocketFn,FlightFetcherFn lambda
+    class DynamoDB,GSI1 dynamo
+    class UserPool,ClientApp,HostedUI,GoogleIdP cognito
+    class IBJJFSite,JJWLSite,AmadeusAPI,GoogleMapsAPI,GoogleOAuth external
+    class EventBus,FlightQueue,FlightDLQ,DailyRule,AirportRule events

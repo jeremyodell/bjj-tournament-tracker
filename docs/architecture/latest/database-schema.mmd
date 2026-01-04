@@ -1,0 +1,77 @@
+%%{init: {'theme': 'dark'}}%%
+
+classDiagram
+    direction LR
+
+    class Tournament {
+        +PK TOURN#org#id
+        +SK META
+        +GSI1PK ORG#org
+        +GSI1SK DATE#startDate
+        name: string
+        org: IBJJF | JJWL
+        city: string
+        venue: string
+        startDate: string
+        endDate: string
+        gi: boolean
+        nogi: boolean
+        kids: boolean
+        registrationUrl: string
+    }
+
+    class UserAthlete {
+        +PK USER#userId
+        +SK ATHLETE#athleteId
+        +GSI1PK ATHLETE
+        +GSI1SK USER#userId
+        athleteId: string
+        name: string
+        beltRank: string
+        birthYear: number
+        weightClass: string
+        gender: string
+    }
+
+    class UserWishlist {
+        +PK USER#userId
+        +SK WISH#tournamentPK
+        +GSI1PK WISHLIST
+        +GSI1SK USER#userId
+        tournamentPK: string
+        status: string
+        athleteIds: array
+    }
+
+    class FlightPrice {
+        +PK FLIGHT#origin#dest
+        +SK DATE#date
+        +GSI1PK FLIGHTS#userId
+        +GSI1SK DATE#date
+        origin: string
+        destination: string
+        price: number
+        carrier: string
+        ttl: number
+    }
+
+    class WebSocketConnection {
+        +PK WS#connectionId
+        +SK META
+        +GSI1PK USER#userId
+        +GSI1SK WS#connectionId
+        connectionId: string
+        userId: string
+        ttl: number
+    }
+
+    class UserAirport {
+        +PK USER#userId
+        +SK AIRPORT#iataCode
+        iataCode: string
+    }
+
+    Tournament <-- UserWishlist : wishlisted
+    UserAthlete <-- UserWishlist : attends
+    UserAirport --> FlightPrice : origin
+    WebSocketConnection ..> FlightPrice : receives updates

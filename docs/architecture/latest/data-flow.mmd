@@ -1,0 +1,90 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#3B82F6', 'primaryTextColor': '#fff', 'primaryBorderColor': '#1E40AF', 'lineColor': '#6B7280', 'secondaryColor': '#10B981', 'tertiaryColor': '#F59E0B' }}}%%
+
+flowchart LR
+    subgraph DataIngestion["📥 Data Ingestion (Daily CRON)"]
+        direction TB
+        IBJJF["🥋 IBJJF\nWebsite Scraping"]
+        JJWL["🥋 JJWL\nAPI + Scraping"]
+        SyncLambda["⚡ Sync Lambda\nPuppeteer Browser"]
+        Normalizer["🔄 Normalizer\nStandardize Format"]
+        GeoService["🌍 Google Maps API\nGeocoding"]
+    end
+
+    subgraph DataStore["🗄️ DynamoDB (Single Table)"]
+        direction TB
+        Tournaments["📅 Tournaments\nPK: TOURN#{org}#{id}\nSK: META"]
+        Athletes["🥋 Athletes\nPK: USER#{id}\nSK: ATHLETE#{id}"]
+        Wishlist["❤️ Wishlist\nPK: USER#{id}\nSK: WISH#{tournPK}"]
+        FlightPrices["✈️ Flight Prices\nPK: FLIGHT#{origin}#{dest}\nSK: {date}"]
+        Connections["🔌 WebSocket\nPK: WS#{connId}\nSK: META"]
+    end
+
+    subgraph API["🚀 API Layer"]
+        direction TB
+        TournamentsAPI["GET /tournaments\n+ filters, pagination"]
+        WishlistAPI["CRUD /wishlist\nJWT Protected"]
+        AthletesAPI["CRUD /athletes\nJWT Protected"]
+        FlightAPI["GET /flight-prices\nJWT Protected"]
+    end
+
+    subgraph Frontend["🖥️ Frontend"]
+        direction TB
+        TournamentList["📋 Tournament List\nFilters + Infinite Scroll"]
+        PlannerWizard["🧙 Planner Wizard\nLocation/Budget/Must-Go"]
+        AthleteProfile["👤 Athlete Profile\nManage Athletes"]
+        SeasonPlan["📆 Season Plan\nOptimized Schedule"]
+    end
+
+    subgraph FlightPriceFlow["✈️ Real-time Flight Prices"]
+        direction TB
+        AirportReg["🛫 Airport Registration"]
+        EventBridge["📬 EventBridge"]
+        SQS["📥 SQS Queue"]
+        FlightFetcher["⚡ Flight Fetcher\nAmadeus API"]
+        WebSocket["🔌 WebSocket\nReal-time Updates"]
+    end
+
+    %% Data Ingestion Flow
+    IBJJF --> SyncLambda
+    JJWL --> SyncLambda
+    SyncLambda --> Normalizer
+    Normalizer --> GeoService
+    GeoService --> Tournaments
+
+    %% Data Storage
+    Tournaments --> TournamentsAPI
+    Athletes --> AthletesAPI
+    Wishlist --> WishlistAPI
+    FlightPrices --> FlightAPI
+
+    %% API to Frontend
+    TournamentsAPI --> TournamentList
+    WishlistAPI --> SeasonPlan
+    AthletesAPI --> AthleteProfile
+    FlightAPI --> SeasonPlan
+
+    %% Frontend Flow
+    TournamentList --> PlannerWizard
+    AthleteProfile --> PlannerWizard
+    PlannerWizard --> SeasonPlan
+
+    %% Flight Price Flow
+    AirportReg --> EventBridge
+    EventBridge --> SQS
+    SQS --> FlightFetcher
+    FlightFetcher --> FlightPrices
+    FlightFetcher --> WebSocket
+    WebSocket --> SeasonPlan
+
+    %% Styling
+    classDef ingestion fill:#8B5CF6,stroke:#7C3AED,color:#fff
+    classDef storage fill:#EF4444,stroke:#DC2626,color:#fff
+    classDef api fill:#F59E0B,stroke:#D97706,color:#000
+    classDef frontend fill:#3B82F6,stroke:#1E40AF,color:#fff
+    classDef flight fill:#06B6D4,stroke:#0891B2,color:#000
+
+    class IBJJF,JJWL,SyncLambda,Normalizer,GeoService ingestion
+    class Tournaments,Athletes,Wishlist,FlightPrices,Connections storage
+    class TournamentsAPI,WishlistAPI,AthletesAPI,FlightAPI api
+    class TournamentList,PlannerWizard,AthleteProfile,SeasonPlan frontend
+    class AirportReg,EventBridge,SQS,FlightFetcher,WebSocket flight

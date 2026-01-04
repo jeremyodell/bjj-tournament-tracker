@@ -1,0 +1,120 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#3B82F6', 'primaryTextColor': '#fff', 'primaryBorderColor': '#1E40AF', 'lineColor': '#6B7280', 'secondaryColor': '#10B981', 'tertiaryColor': '#F59E0B', 'background': '#0F172A', 'mainBkg': '#1E293B', 'nodeBorder': '#475569', 'clusterBkg': '#1E293B', 'clusterBorder': '#334155', 'titleColor': '#F8FAFC', 'textColor': '#E2E8F0', 'nodeTextColor': '#F8FAFC' }}}%%
+
+flowchart TB
+    subgraph Users["👥 Users"]
+        Browser["🌐 Web Browser"]
+        Mobile["📱 Mobile (PWA)"]
+    end
+
+    subgraph Frontend["🖥️ Frontend (Vercel)"]
+        subgraph NextJS["Next.js 15 (App Router)"]
+            Pages["📄 Pages"]
+            Components["🧩 Components"]
+            Stores["📦 Zustand Stores"]
+            Hooks["🎣 TanStack Query"]
+            AuthLib["🔐 Auth (Amplify)"]
+        end
+    end
+
+    subgraph AWS["☁️ AWS Cloud"]
+        subgraph Auth["🔒 Authentication"]
+            Cognito["AWS Cognito"]
+            Google["Google OAuth"]
+        end
+
+        subgraph API["🚀 API Gateway"]
+            RestAPI["REST API Gateway"]
+            WebSocketAPI["WebSocket API\n(Flight Prices)"]
+        end
+
+        subgraph Lambda["⚡ Lambda Functions"]
+            TournamentsFn["📅 tournaments\nGET /tournaments"]
+            SyncFn["🔄 sync\nScheduled CRON"]
+            WishlistFn["❤️ wishlist\nGET/POST/DELETE"]
+            AthletesFn["🥋 athletes\nCRUD"]
+            FlightPricesFn["✈️ flight-prices\nGET"]
+            AirportsFn["🛫 airports\nPOST"]
+            FlightFetcherFn["📊 flight-fetcher\nSQS Triggered"]
+            WebSocketFn["🔌 websocket\nConnect/Disconnect"]
+        end
+
+        subgraph DataSources["🌍 External Data"]
+            IBJJF["IBJJF\nibjjf.com"]
+            JJWL["JJWL\njjworldleague.com"]
+            Amadeus["Amadeus API\nFlight Data"]
+            GoogleMaps["Google Maps\nGeocoding"]
+        end
+
+        subgraph Events["📬 Event-Driven"]
+            EventBridge["EventBridge"]
+            SQS["SQS Queue"]
+            DLQ["Dead Letter Queue"]
+        end
+
+        subgraph Database["🗄️ Database"]
+            DynamoDB["DynamoDB\nSingle-Table Design"]
+        end
+    end
+
+    %% User connections
+    Browser --> NextJS
+    Mobile --> NextJS
+
+    %% Frontend to Auth
+    AuthLib --> Cognito
+    Cognito <--> Google
+
+    %% Frontend to API
+    Hooks --> RestAPI
+    Hooks --> WebSocketAPI
+
+    %% API to Lambda
+    RestAPI --> TournamentsFn
+    RestAPI --> WishlistFn
+    RestAPI --> AthletesFn
+    RestAPI --> FlightPricesFn
+    RestAPI --> AirportsFn
+    WebSocketAPI --> WebSocketFn
+
+    %% Lambda to Database
+    TournamentsFn --> DynamoDB
+    SyncFn --> DynamoDB
+    WishlistFn --> DynamoDB
+    AthletesFn --> DynamoDB
+    FlightPricesFn --> DynamoDB
+    AirportsFn --> DynamoDB
+    FlightFetcherFn --> DynamoDB
+    WebSocketFn --> DynamoDB
+
+    %% Sync to External
+    SyncFn --> IBJJF
+    SyncFn --> JJWL
+    SyncFn --> GoogleMaps
+
+    %% Flight Price Flow
+    AirportsFn --> EventBridge
+    EventBridge --> SQS
+    SQS --> FlightFetcherFn
+    FlightFetcherFn --> Amadeus
+    FlightFetcherFn --> WebSocketAPI
+    SQS --> DLQ
+
+    %% Cognito Authorization
+    Cognito -.-> RestAPI
+    Cognito -.-> WebSocketAPI
+
+    %% Styling
+    classDef frontend fill:#3B82F6,stroke:#1E40AF,color:#fff
+    classDef lambda fill:#F59E0B,stroke:#D97706,color:#000
+    classDef data fill:#10B981,stroke:#059669,color:#fff
+    classDef auth fill:#8B5CF6,stroke:#7C3AED,color:#fff
+    classDef external fill:#EC4899,stroke:#DB2777,color:#fff
+    classDef events fill:#06B6D4,stroke:#0891B2,color:#000
+    classDef db fill:#EF4444,stroke:#DC2626,color:#fff
+
+    class NextJS,Pages,Components,Stores,Hooks,AuthLib frontend
+    class TournamentsFn,SyncFn,WishlistFn,AthletesFn,FlightPricesFn,AirportsFn,FlightFetcherFn,WebSocketFn lambda
+    class Cognito,Google auth
+    class IBJJF,JJWL,Amadeus,GoogleMaps external
+    class EventBridge,SQS,DLQ events
+    class DynamoDB db
