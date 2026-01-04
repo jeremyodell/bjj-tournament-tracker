@@ -18,6 +18,7 @@ process.env.AWS_SECRET_ACCESS_KEY = 'local';
 
 // Import handlers dynamically after setting env vars
 const { handler: tournamentsHandler } = await import('./handlers/tournaments.js');
+const { handler: gymsHandler } = await import('./handlers/gyms.js');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
