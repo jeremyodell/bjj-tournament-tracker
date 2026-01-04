@@ -91,6 +91,8 @@ function createMockAthlete(overrides: Partial<AthleteItem> = {}): AthleteItem {
     birthYear: 2015,
     weightClass: '50lbs',
     homeAirport: null,
+    gymSourceId: null,
+    gymName: null,
     createdAt: '2025-01-01T00:00:00Z',
     updatedAt: '2025-01-01T00:00:00Z',
     ...overrides,

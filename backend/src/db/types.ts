@@ -87,6 +87,8 @@ export interface AthleteItem {
   birthYear: number | null;
   weightClass: string | null;
   homeAirport: string | null;
+  gymSourceId: string | null; // e.g., "JJWL#5713"
+  gymName: string | null; // Denormalized display name
   createdAt: string;
   updatedAt: string;
 }

@@ -12,6 +12,8 @@ export interface CreateAthleteInput {
   weight?: number;
   gymName?: string;
   homeAirport?: string;
+  gymSourceId?: string; // e.g., "JJWL#5713"
+  gymDisplayName?: string; // Maps to gymName on AthleteItem
 }
 
 export async function getUserAthletes(userId: string): Promise<AthleteItem[]> {
@@ -44,6 +46,8 @@ export async function createAthlete(
     birthYear: input.birthYear || null,
     weightClass: input.weight ? `${input.weight}lbs` : null,
     homeAirport: input.homeAirport?.trim().toUpperCase() || null,
+    gymSourceId: input.gymSourceId || null,
+    gymName: input.gymDisplayName || null,
     createdAt: now,
     updatedAt: now,
   };
@@ -85,6 +89,12 @@ export async function updateAthlete(
     homeAirport: input.homeAirport !== undefined
       ? (input.homeAirport?.trim().toUpperCase() || null)
       : existing.homeAirport,
+    gymSourceId: input.gymSourceId !== undefined
+      ? (input.gymSourceId || null)
+      : existing.gymSourceId,
+    gymName: input.gymDisplayName !== undefined
+      ? (input.gymDisplayName || null)
+      : existing.gymName,
     updatedAt: new Date().toISOString(),
   };
 
