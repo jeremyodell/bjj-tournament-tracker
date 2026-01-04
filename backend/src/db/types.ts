@@ -37,6 +37,9 @@ export const buildSourceGymGSI1SK = (org: string, name: string): string =>
 export const buildGymRosterSK = (gymExternalId: string): string =>
   `GYMROSTER#${gymExternalId}`;
 
+export const buildGymSyncMetaPK = (org: string): string =>
+  `GYMSYNC#${org}`;
+
 // Entity types
 export interface TournamentItem {
   PK: string; // TOURN#<org>#<externalId>
@@ -174,6 +177,14 @@ export interface SourceGymItem {
   externalId: string;
   name: string;
   masterGymId: string | null; // Future: links to canonical gym
+  // Optional IBJJF fields
+  country?: string | null;
+  countryCode?: string | null;
+  city?: string | null;
+  address?: string | null;
+  federation?: string | null;
+  website?: string | null;
+  responsible?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -195,6 +206,16 @@ export interface TournamentGymRosterItem {
   fetchedAt: string;
 }
 
+// Gym sync metadata for change detection
+export interface GymSyncMetaItem {
+  PK: string; // GYMSYNC#{org}
+  SK: 'META';
+  org: 'JJWL' | 'IBJJF';
+  totalRecords: number;
+  lastSyncAt: string;
+  lastChangeAt: string; // When totalRecords last changed
+}
+
 export type DynamoDBItem =
   | TournamentItem
   | UserProfileItem
@@ -205,4 +226,5 @@ export type DynamoDBItem =
   | KnownAirportItem
   | WsConnectionItem
   | SourceGymItem
-  | TournamentGymRosterItem;
+  | TournamentGymRosterItem
+  | GymSyncMetaItem;
