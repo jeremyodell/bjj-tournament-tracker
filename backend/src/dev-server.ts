@@ -158,8 +158,11 @@ app.listen(PORT, () => {
 ║  Health Check:   http://localhost:${PORT}/health               ║
 ╠════════════════════════════════════════════════════════════╣
 ║  Endpoints:                                                ║
-║    GET /api/tournaments         List tournaments           ║
-║    GET /api/tournaments/:id     Get single tournament      ║
+║    GET /api/tournaments            List tournaments        ║
+║    GET /api/tournaments/:id        Get single tournament   ║
+║    GET /api/gyms                   Search gyms             ║
+║    GET /api/gyms/:org/:id          Get gym details         ║
+║    GET /api/gyms/:org/:id/roster/:tid  Get gym roster      ║
 ╚════════════════════════════════════════════════════════════╝
   `);
 });
