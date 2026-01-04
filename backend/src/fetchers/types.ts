@@ -51,3 +51,16 @@ export interface NormalizedTournament {
   venueId?: string | null;
   geocodeConfidence?: 'high' | 'low' | 'failed' | null;
 }
+
+// JJWL Gym from API
+export interface JJWLGym {
+  id: string;
+  name: string;
+}
+
+// Normalized gym (for cross-source support)
+export interface NormalizedGym {
+  org: 'JJWL' | 'IBJJF';
+  externalId: string;
+  name: string;
+}
