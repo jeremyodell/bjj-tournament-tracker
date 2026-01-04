@@ -68,6 +68,11 @@ Parameters:
     NoEcho: true
     Description: Google Maps API Key for geocoding
 
+  AlertEmail:
+    Type: String
+    Default: ''
+    Description: Email address for Lambda error alerts (optional)
+
 Resources:
   # ============================================
   # DynamoDB Table
@@ -794,6 +799,8 @@ Resources:
       Dimensions:
         - Name: FunctionName
           Value: !Ref TournamentsFunction
+      AlarmActions:
+        - !Ref AlertsTopic
 
   SyncFunctionErrorAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -811,6 +818,80 @@ Resources:
       Dimensions:
         - Name: FunctionName
           Value: !Ref SyncFunction
+      AlarmActions:
+        - !Ref AlertsTopic
+
+  # ============================================
+  # Alerts Infrastructure
+  # ============================================
+  AlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub bjj-tournament-tracker-alerts-${Stage}
+      Tags:
+        - Key: Project
+          Value: bjj-tournament-tracker
+        - Key: Environment
+          Value: !Ref Stage
+
+  AlertsEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasAlertEmail
+    Properties:
+      TopicArn: !Ref AlertsTopic
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+
+  # ============================================
+  # Gym Sync Infrastructure
+  # ============================================
+  GymSyncFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub bjj-tournament-tracker-gym-sync-${Stage}
+      Handler: dist/handlers/gymSync.handler
+      CodeUri: .
+      Description: Weekly sync of gym data from IBJJF
+      Timeout: 900
+      MemorySize: 256
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TournamentsTable
+      Events:
+        WeeklySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 6 ? * SUN *)
+            Description: Weekly gym sync on Sundays at 6 AM UTC
+            Enabled: true
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/gymSync.ts
+        External:
+          - '@aws-sdk/*'
+
+  GymSyncFunctionErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Stage}-gym-sync-function-errors
+      AlarmDescription: Alarm when Gym Sync function has errors
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref GymSyncFunction
+      AlarmActions:
+        - !Ref AlertsTopic
 
 Conditions:
   IsProd: !Equals
@@ -819,6 +900,10 @@ Conditions:
   FlightPricesEnabled: !Equals
     - !Ref EnableFlightPrices
     - 'true'
+  HasAlertEmail: !Not
+    - !Equals
+      - !Ref AlertEmail
+      - ''
 
 Outputs:
   TournamentsApiUrl:
@@ -848,6 +933,14 @@ Outputs:
   GymsFunctionArn:
     Description: Gyms Lambda Function ARN
     Value: !GetAtt GymsFunction.Arn
+
+  GymSyncFunctionArn:
+    Description: Gym Sync Lambda Function ARN
+    Value: !GetAtt GymSyncFunction.Arn
+
+  AlertsTopicArn:
+    Description: SNS Topic ARN for Lambda error alerts
+    Value: !Ref AlertsTopic
 
   DynamoDBTableName:
     Description: DynamoDB Table Name
