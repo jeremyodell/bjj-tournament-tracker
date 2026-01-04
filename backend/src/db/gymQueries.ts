@@ -207,3 +207,34 @@ export async function getGymSyncMeta(
 
   return (result.Item as GymSyncMetaItem) || null;
 }
+
+/**
+ * Update gym sync metadata (upsert)
+ * - Always updates lastSyncAt
+ * - Only updates lastChangeAt when totalRecords differs from previous value
+ */
+export async function updateGymSyncMeta(
+  org: 'JJWL' | 'IBJJF',
+  totalRecords: number
+): Promise<void> {
+  const now = new Date().toISOString();
+  const existing = await getGymSyncMeta(org);
+
+  const recordsChanged = !existing || existing.totalRecords !== totalRecords;
+
+  const item: GymSyncMetaItem = {
+    PK: buildGymSyncMetaPK(org),
+    SK: 'META',
+    org,
+    totalRecords,
+    lastSyncAt: now,
+    lastChangeAt: recordsChanged ? now : existing.lastChangeAt,
+  };
+
+  await docClient.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: item,
+    })
+  );
+}
