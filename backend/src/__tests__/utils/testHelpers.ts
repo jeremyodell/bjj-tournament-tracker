@@ -181,3 +181,45 @@ export function createTournamentDetailEvent(id: string): APIGatewayProxyEvent {
     pathParameters: { id },
   });
 }
+
+/**
+ * Helper to create a GET request event for gyms search.
+ */
+export function createGymsSearchEvent(
+  queryParams?: Record<string, string>
+): APIGatewayProxyEvent {
+  return mockAPIGatewayEvent({
+    httpMethod: 'GET',
+    path: '/gyms',
+    queryStringParameters: queryParams || null,
+  });
+}
+
+/**
+ * Helper to create a GET request event for a single gym.
+ */
+export function createGymDetailEvent(
+  org: string,
+  externalId: string
+): APIGatewayProxyEvent {
+  return mockAPIGatewayEvent({
+    httpMethod: 'GET',
+    path: `/gyms/${org}/${externalId}`,
+    pathParameters: { org, externalId },
+  });
+}
+
+/**
+ * Helper to create a GET request event for gym roster.
+ */
+export function createGymRosterEvent(
+  org: string,
+  externalId: string,
+  tournamentId: string
+): APIGatewayProxyEvent {
+  return mockAPIGatewayEvent({
+    httpMethod: 'GET',
+    path: `/gyms/${org}/${externalId}/roster/${tournamentId}`,
+    pathParameters: { org, externalId, tournamentId },
+  });
+}
