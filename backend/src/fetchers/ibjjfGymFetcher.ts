@@ -136,3 +136,71 @@ export async function fetchIBJJFGymCount(): Promise<number> {
 
   return parsed.totalRecords;
 }
+
+export type ProgressCallback = (current: number, total: number) => void;
+
+/**
+ * Delay helper for rate limiting
+ */
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Fetch all IBJJF academies with sequential pagination
+ */
+export async function fetchAllIBJJFGyms(
+  onProgress?: ProgressCallback
+): Promise<IBJJFNormalizedGym[]> {
+  console.log('[IBJJFGymFetcher] Starting full gym sync...');
+
+  const allGyms: IBJJFNormalizedGym[] = [];
+  let page = 0;
+  let totalPages = 1;
+
+  while (page < totalPages) {
+    try {
+      const start = page * PAGE_SIZE;
+      const url = `${IBJJF_ACADEMIES_URL}?start=${start}&length=${PAGE_SIZE}`;
+
+      const response = await fetch(url, {
+        headers: {
+          accept: 'application/json, text/javascript, */*; q=0.01',
+          'x-requested-with': 'XMLHttpRequest',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `IBJJF academies API returned ${response.status}: ${response.statusText}`
+        );
+      }
+
+      const json = await response.json();
+      const parsed = parseIBJJFAcademiesResponse(json);
+
+      if (page === 0) {
+        totalPages = Math.ceil(parsed.totalRecords / PAGE_SIZE);
+        console.log(
+          `[IBJJFGymFetcher] Total records: ${parsed.totalRecords}, pages: ${totalPages}`
+        );
+      }
+
+      allGyms.push(...parsed.gyms);
+      onProgress?.(page + 1, totalPages);
+    } catch (error) {
+      console.warn(
+        `[IBJJFGymFetcher] Page ${page} failed, skipping:`,
+        error instanceof Error ? error.message : error
+      );
+    }
+
+    if (page < totalPages - 1) {
+      await delay(200);
+    }
+    page++;
+  }
+
+  console.log(`[IBJJFGymFetcher] Fetched ${allGyms.length} gyms total`);
+  return allGyms;
+}
