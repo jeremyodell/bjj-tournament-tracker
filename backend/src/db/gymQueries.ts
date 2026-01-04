@@ -8,12 +8,12 @@ import {
   buildGymSyncMetaPK,
 } from './types.js';
 import type { SourceGymItem, TournamentGymRosterItem, GymSyncMetaItem } from './types.js';
-import type { NormalizedGym, JJWLRosterAthlete } from '../fetchers/types.js';
+import type { NormalizedGym, IBJJFNormalizedGym, JJWLRosterAthlete } from '../fetchers/types.js';
 
 /**
  * Upsert a source gym (from JJWL, IBJJF, etc.)
  */
-export async function upsertSourceGym(gym: NormalizedGym): Promise<void> {
+export async function upsertSourceGym(gym: NormalizedGym | IBJJFNormalizedGym): Promise<void> {
   const now = new Date().toISOString();
 
   const item: SourceGymItem = {
@@ -25,6 +25,14 @@ export async function upsertSourceGym(gym: NormalizedGym): Promise<void> {
     externalId: gym.externalId,
     name: gym.name,
     masterGymId: null,
+    // IBJJF extended fields - null when not provided
+    country: (gym as IBJJFNormalizedGym).country ?? null,
+    countryCode: (gym as IBJJFNormalizedGym).countryCode ?? null,
+    city: (gym as IBJJFNormalizedGym).city ?? null,
+    address: (gym as IBJJFNormalizedGym).address ?? null,
+    federation: (gym as IBJJFNormalizedGym).federation ?? null,
+    website: (gym as IBJJFNormalizedGym).website ?? null,
+    responsible: (gym as IBJJFNormalizedGym).responsible ?? null,
     createdAt: now,
     updatedAt: now,
   };

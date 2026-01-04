@@ -14,7 +14,7 @@ import {
 import { PutCommand } from '@aws-sdk/lib-dynamodb';
 import { docClient } from '../../db/client.js';
 import type { SourceGymItem, TournamentGymRosterItem, GymSyncMetaItem } from '../../db/types.js';
-import type { NormalizedGym, JJWLRosterAthlete } from '../../fetchers/types.js';
+import type { NormalizedGym, IBJJFNormalizedGym, JJWLRosterAthlete } from '../../fetchers/types.js';
 
 // Mock the docClient
 jest.mock('../../db/client.js', () => ({
@@ -74,6 +74,59 @@ describe('gymQueries', () => {
       expect(input.Item.PK).toBe('SRCGYM#IBJJF#ibjjf-456');
       expect(input.Item.GSI1SK).toBe('IBJJF#Alliance Atlanta');
       expect(input.Item.org).toBe('IBJJF');
+    });
+
+    it('should store null for extended fields when using NormalizedGym', async () => {
+      mockSend.mockResolvedValueOnce({} as never);
+
+      const gym: NormalizedGym = {
+        org: 'JJWL',
+        externalId: 'jjwl-123',
+        name: 'Test Academy',
+      };
+
+      await upsertSourceGym(gym);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const input = mockSend.mock.calls[0][0].input as any;
+      expect(input.Item.country).toBeNull();
+      expect(input.Item.countryCode).toBeNull();
+      expect(input.Item.city).toBeNull();
+      expect(input.Item.address).toBeNull();
+      expect(input.Item.federation).toBeNull();
+      expect(input.Item.website).toBeNull();
+      expect(input.Item.responsible).toBeNull();
+    });
+
+    it('should persist IBJJF extended fields when provided', async () => {
+      mockSend.mockResolvedValueOnce({} as never);
+
+      const gym: IBJJFNormalizedGym = {
+        org: 'IBJJF',
+        externalId: 'ibjjf-789',
+        name: 'Gracie Barra HQ',
+        country: 'United States',
+        countryCode: 'US',
+        city: 'Irvine',
+        address: '123 Main St',
+        federation: 'IBJJF',
+        website: 'https://graciebarra.com',
+        responsible: 'Carlos Gracie Jr',
+      };
+
+      await upsertSourceGym(gym);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const input = mockSend.mock.calls[0][0].input as any;
+      expect(input.Item.PK).toBe('SRCGYM#IBJJF#ibjjf-789');
+      expect(input.Item.name).toBe('Gracie Barra HQ');
+      expect(input.Item.country).toBe('United States');
+      expect(input.Item.countryCode).toBe('US');
+      expect(input.Item.city).toBe('Irvine');
+      expect(input.Item.address).toBe('123 Main St');
+      expect(input.Item.federation).toBe('IBJJF');
+      expect(input.Item.website).toBe('https://graciebarra.com');
+      expect(input.Item.responsible).toBe('Carlos Gracie Jr');
     });
   });
 
