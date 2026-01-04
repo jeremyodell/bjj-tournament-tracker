@@ -1,5 +1,9 @@
 import { describe, it, expect } from '@jest/globals';
-import { sanitizeGymName, mapIBJJFAcademyToGym } from '../../fetchers/ibjjfGymFetcher.js';
+import {
+  sanitizeGymName,
+  mapIBJJFAcademyToGym,
+  parseIBJJFAcademiesResponse,
+} from '../../fetchers/ibjjfGymFetcher.js';
 import type { IBJJFAcademy } from '../../fetchers/types.js';
 
 describe('ibjjfGymFetcher', () => {
@@ -112,6 +116,130 @@ describe('ibjjfGymFetcher', () => {
       expect(result.federation).toBeUndefined();
       expect(result.website).toBeUndefined();
       expect(result.responsible).toBeUndefined();
+    });
+  });
+
+  describe('parseIBJJFAcademiesResponse', () => {
+    it('parses valid response with multiple academies', () => {
+      const response = {
+        data: [
+          { id: 1, name: 'Gym A', country: 'US', countryCode: 'US', city: 'NYC', address: '', federation: '', site: '', responsible: '' },
+          { id: 2, name: 'Gym B', country: 'BR', countryCode: 'BR', city: 'Rio', address: '', federation: '', site: '', responsible: '' },
+        ],
+        totalRecords: 100,
+        filteredRecords: 2,
+      };
+
+      const result = parseIBJJFAcademiesResponse(response);
+
+      expect(result.gyms).toHaveLength(2);
+      expect(result.totalRecords).toBe(100);
+      expect(result.gyms[0].externalId).toBe('1');
+      expect(result.gyms[1].externalId).toBe('2');
+    });
+
+    it('filters entries with missing id', () => {
+      const response = {
+        data: [
+          { id: 1, name: 'Valid Gym', country: '', countryCode: '', city: '', address: '', federation: '', site: '', responsible: '' },
+          { name: 'No ID Gym', country: '', countryCode: '', city: '', address: '', federation: '', site: '', responsible: '' },
+        ],
+        totalRecords: 2,
+        filteredRecords: 2,
+      };
+
+      const result = parseIBJJFAcademiesResponse(response);
+
+      expect(result.gyms).toHaveLength(1);
+      expect(result.gyms[0].name).toBe('Valid Gym');
+    });
+
+    it('filters entries with missing name', () => {
+      const response = {
+        data: [
+          { id: 1, name: 'Valid Gym', country: '', countryCode: '', city: '', address: '', federation: '', site: '', responsible: '' },
+          { id: 2, country: '', countryCode: '', city: '', address: '', federation: '', site: '', responsible: '' },
+        ],
+        totalRecords: 2,
+        filteredRecords: 2,
+      };
+
+      const result = parseIBJJFAcademiesResponse(response);
+
+      expect(result.gyms).toHaveLength(1);
+      expect(result.gyms[0].name).toBe('Valid Gym');
+    });
+
+    it('filters entries with empty name', () => {
+      const response = {
+        data: [
+          { id: 1, name: 'Valid Gym', country: '', countryCode: '', city: '', address: '', federation: '', site: '', responsible: '' },
+          { id: 2, name: '', country: '', countryCode: '', city: '', address: '', federation: '', site: '', responsible: '' },
+        ],
+        totalRecords: 2,
+        filteredRecords: 2,
+      };
+
+      const result = parseIBJJFAcademiesResponse(response);
+
+      expect(result.gyms).toHaveLength(1);
+    });
+
+    it('filters entries with whitespace-only name', () => {
+      const response = {
+        data: [
+          { id: 1, name: 'Valid Gym', country: '', countryCode: '', city: '', address: '', federation: '', site: '', responsible: '' },
+          { id: 2, name: '   ', country: '', countryCode: '', city: '', address: '', federation: '', site: '', responsible: '' },
+        ],
+        totalRecords: 2,
+        filteredRecords: 2,
+      };
+
+      const result = parseIBJJFAcademiesResponse(response);
+
+      expect(result.gyms).toHaveLength(1);
+    });
+
+    it('returns empty array for non-object response', () => {
+      const result = parseIBJJFAcademiesResponse('not an object');
+
+      expect(result.gyms).toHaveLength(0);
+      expect(result.totalRecords).toBe(0);
+    });
+
+    it('returns empty array for null response', () => {
+      const result = parseIBJJFAcademiesResponse(null);
+
+      expect(result.gyms).toHaveLength(0);
+      expect(result.totalRecords).toBe(0);
+    });
+
+    it('returns empty array for missing data field', () => {
+      const result = parseIBJJFAcademiesResponse({ totalRecords: 10 });
+
+      expect(result.gyms).toHaveLength(0);
+      expect(result.totalRecords).toBe(0);
+    });
+
+    it('returns empty array when data is not an array', () => {
+      const result = parseIBJJFAcademiesResponse({ data: 'not array', totalRecords: 10 });
+
+      expect(result.gyms).toHaveLength(0);
+      expect(result.totalRecords).toBe(0);
+    });
+
+    it('extracts totalRecords correctly', () => {
+      const response = {
+        data: [
+          { id: 1, name: 'Gym', country: '', countryCode: '', city: '', address: '', federation: '', site: '', responsible: '' },
+        ],
+        totalRecords: 8574,
+        filteredRecords: 1,
+      };
+
+      const result = parseIBJJFAcademiesResponse(response);
+
+      expect(result.totalRecords).toBe(8574);
     });
   });
 });
