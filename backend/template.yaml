@@ -426,6 +426,46 @@ Resources:
         External:
           - '@aws-sdk/*'
 
+  GymsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub bjj-tournament-tracker-gyms-${Stage}
+      Handler: dist/handlers/gyms.handler
+      CodeUri: .
+      Description: Handles gym search and roster lookups
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TournamentsTable
+      Events:
+        SearchGyms:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /gyms
+            Method: GET
+        GetGym:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /gyms/{org}/{externalId}
+            Method: GET
+        GetRoster:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /gyms/{org}/{externalId}/roster/{tournamentId}
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/gyms.ts
+        External:
+          - '@aws-sdk/*'
+
   FlightPricesFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -804,6 +844,10 @@ Outputs:
   AthletesFunctionArn:
     Description: Athletes Lambda Function ARN
     Value: !GetAtt AthletesFunction.Arn
+
+  GymsFunctionArn:
+    Description: Gyms Lambda Function ARN
+    Value: !GetAtt GymsFunction.Arn
 
   DynamoDBTableName:
     Description: DynamoDB Table Name
