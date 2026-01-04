@@ -18,6 +18,7 @@ process.env.AWS_SECRET_ACCESS_KEY = 'local';
 
 // Import handlers dynamically after setting env vars
 const { handler: tournamentsHandler } = await import('./handlers/tournaments.js');
+const { handler: gymsHandler } = await import('./handlers/gyms.js');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -131,6 +132,11 @@ app.get('/api/tournaments/:id', (req, res, next) => {
   next();
 }, wrapHandler(tournamentsHandler));
 
+// Gym routes
+app.get('/api/gyms', wrapHandler(gymsHandler));
+app.get('/api/gyms/:org/:externalId', wrapHandler(gymsHandler));
+app.get('/api/gyms/:org/:externalId/roster/:tournamentId', wrapHandler(gymsHandler));
+
 // Health check
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -152,8 +158,11 @@ app.listen(PORT, () => {
 ║  Health Check:   http://localhost:${PORT}/health               ║
 ╠════════════════════════════════════════════════════════════╣
 ║  Endpoints:                                                ║
-║    GET /api/tournaments         List tournaments           ║
-║    GET /api/tournaments/:id     Get single tournament      ║
+║    GET /api/tournaments            List tournaments        ║
+║    GET /api/tournaments/:id        Get single tournament   ║
+║    GET /api/gyms                   Search gyms             ║
+║    GET /api/gyms/:org/:id          Get gym details         ║
+║    GET /api/gyms/:org/:id/roster/:tid  Get gym roster      ║
 ╚════════════════════════════════════════════════════════════╝
   `);
 });
