@@ -5,6 +5,9 @@ export interface ParsedIBJJFResponse {
   totalRecords: number;
 }
 
+const IBJJF_ACADEMIES_URL = 'https://ibjjf.com/api/academies';
+const PAGE_SIZE = 20;
+
 /**
  * Sanitize gym name by removing # characters (breaks GSI1SK) and trimming whitespace
  */
@@ -74,4 +77,62 @@ export function parseIBJJFAcademiesResponse(data: unknown): ParsedIBJJFResponse 
     .map(mapIBJJFAcademyToGym);
 
   return { gyms, totalRecords };
+}
+
+/**
+ * Fetch a single page of IBJJF academies
+ */
+export async function fetchIBJJFGymPage(
+  page: number
+): Promise<{ data: IBJJFAcademy[]; totalRecords: number }> {
+  const start = page * PAGE_SIZE;
+  const url = `${IBJJF_ACADEMIES_URL}?start=${start}&length=${PAGE_SIZE}`;
+
+  console.log(`[IBJJFGymFetcher] Fetching page ${page} (start=${start})`);
+
+  const response = await fetch(url, {
+    headers: {
+      accept: 'application/json, text/javascript, */*; q=0.01',
+      'x-requested-with': 'XMLHttpRequest',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `IBJJF academies API returned ${response.status}: ${response.statusText}`
+    );
+  }
+
+  const json = await response.json();
+  const parsed = parseIBJJFAcademiesResponse(json);
+
+  return {
+    data: parsed.gyms as unknown as IBJJFAcademy[],
+    totalRecords: parsed.totalRecords,
+  };
+}
+
+/**
+ * Fetch total count of IBJJF academies for change detection
+ */
+export async function fetchIBJJFGymCount(): Promise<number> {
+  const url = `${IBJJF_ACADEMIES_URL}?start=0&length=1`;
+
+  const response = await fetch(url, {
+    headers: {
+      accept: 'application/json, text/javascript, */*; q=0.01',
+      'x-requested-with': 'XMLHttpRequest',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `IBJJF academies API returned ${response.status}: ${response.statusText}`
+    );
+  }
+
+  const json = await response.json();
+  const parsed = parseIBJJFAcademiesResponse(json);
+
+  return parsed.totalRecords;
 }
