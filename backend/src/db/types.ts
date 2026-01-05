@@ -40,6 +40,13 @@ export const buildGymRosterSK = (gymExternalId: string): string =>
 export const buildGymSyncMetaPK = (org: string): string =>
   `GYMSYNC#${org}`;
 
+// Master gym key builders
+export const buildMasterGymPK = (id: string): string =>
+  `MASTERGYM#${id}`;
+
+export const buildPendingMatchPK = (id: string): string =>
+  `PENDINGMATCH#${id}`;
+
 // Entity types
 export interface TournamentItem {
   PK: string; // TOURN#<org>#<externalId>
@@ -216,6 +223,49 @@ export interface GymSyncMetaItem {
   lastChangeAt: string; // When totalRecords last changed
 }
 
+// Master gym entity (unified gym across orgs)
+export interface MasterGymItem {
+  PK: string; // MASTERGYM#{uuid}
+  SK: 'META';
+  GSI1PK: 'MASTERGYMS';
+  GSI1SK: string; // {canonicalName} for prefix search
+  id: string;
+  canonicalName: string;
+  city: string | null;
+  country: string | null;
+  address: string | null;
+  website: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Match confidence signals for fuzzy matching
+export interface MatchSignals {
+  nameSimilarity: number; // 0-100 Levenshtein-based score
+  cityBoost: number; // 0-15 bonus for matching city
+  affiliationBoost: number; // 0-10 bonus for matching affiliation
+}
+
+// Pending match for admin review
+export interface PendingMatchItem {
+  PK: string; // PENDINGMATCH#{uuid}
+  SK: 'META';
+  GSI1PK: 'PENDINGMATCHES';
+  GSI1SK: string; // {status}#{createdAt} for filtering by status
+  id: string;
+  sourceGym1Id: string; // SRCGYM#{org}#{externalId}
+  sourceGym1Name: string;
+  sourceGym2Id: string; // SRCGYM#{org}#{externalId}
+  sourceGym2Name: string;
+  confidence: number; // 0-100 overall match score
+  signals: MatchSignals;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type DynamoDBItem =
   | TournamentItem
   | UserProfileItem
@@ -227,4 +277,6 @@ export type DynamoDBItem =
   | WsConnectionItem
   | SourceGymItem
   | TournamentGymRosterItem
-  | GymSyncMetaItem;
+  | GymSyncMetaItem
+  | MasterGymItem
+  | PendingMatchItem;
