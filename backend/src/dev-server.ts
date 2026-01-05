@@ -19,6 +19,8 @@ process.env.AWS_SECRET_ACCESS_KEY = 'local';
 // Import handlers dynamically after setting env vars
 const { handler: tournamentsHandler } = await import('./handlers/tournaments.js');
 const { handler: gymsHandler } = await import('./handlers/gyms.js');
+const { handler: adminMatchesHandler } = await import('./handlers/adminMatches.js');
+const { handler: masterGymsHandler } = await import('./handlers/masterGyms.js');
 const { syncIBJJFGyms } = await import('./services/gymSyncService.js');
 
 const app = express();
@@ -54,7 +56,13 @@ function toAPIGatewayEvent(req: Request): APIGatewayProxyEvent {
     requestContext: {
       accountId: 'local',
       apiId: 'local',
-      authorizer: null,
+      // Mock Cognito authorizer for local dev
+      authorizer: {
+        claims: {
+          sub: 'dev-user-123',
+          email: 'dev@localhost',
+        },
+      },
       protocol: 'HTTP/1.1',
       httpMethod: req.method,
       identity: {
@@ -137,6 +145,16 @@ app.get('/api/tournaments/:id', (req, res, next) => {
 app.get('/api/gyms', wrapHandler(gymsHandler));
 app.get('/api/gyms/:org/:externalId', wrapHandler(gymsHandler));
 app.get('/api/gyms/:org/:externalId/roster/:tournamentId', wrapHandler(gymsHandler));
+
+// Admin routes
+app.get('/api/admin/pending-matches', wrapHandler(adminMatchesHandler));
+app.post('/api/admin/pending-matches/:id/approve', wrapHandler(adminMatchesHandler));
+app.post('/api/admin/pending-matches/:id/reject', wrapHandler(adminMatchesHandler));
+app.post('/api/admin/master-gyms/:id/unlink', wrapHandler(adminMatchesHandler));
+
+// Master gym routes (public)
+app.get('/api/gyms/search', wrapHandler(masterGymsHandler));
+app.get('/api/master-gyms/:id', wrapHandler(masterGymsHandler));
 
 // Gym sync route (manual trigger for local testing)
 app.post('/gym-sync', async (req, res) => {
