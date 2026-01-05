@@ -12,11 +12,18 @@ import {
   updateGymSyncMeta,
 } from '../db/gymQueries.js';
 import { queryTournaments } from '../db/queries.js';
+import { processGymMatches } from './gymMatchingService.js';
 import type { TournamentItem } from '../db/types.js';
+import type { NormalizedGym } from '../fetchers/types.js';
 
 export interface GymSyncResult {
   fetched: number;
   saved: number;
+  matching?: {
+    processed: number;
+    autoLinked: number;
+    pendingCreated: number;
+  };
   error?: string;
 }
 
@@ -36,6 +43,11 @@ export interface IBJJFGymSyncResult {
   fetched: number;
   saved: number;
   duration: number;
+  matching?: {
+    processed: number;
+    autoLinked: number;
+    pendingCreated: number;
+  };
   error?: string;
 }
 
@@ -45,17 +57,54 @@ export interface IBJJFSyncOptions {
 }
 
 /**
+ * Run matching for a list of gyms.
+ * Fetches each gym from DB to check if already linked, then processes unlinked gyms.
+ */
+async function runMatchingForGyms(
+  gyms: NormalizedGym[]
+): Promise<{ processed: number; autoLinked: number; pendingCreated: number }> {
+  let processed = 0;
+  let autoLinked = 0;
+  let pendingCreated = 0;
+
+  for (const gym of gyms) {
+    // Get the full source gym from DB to check masterGymId
+    const sourceGym = await getSourceGym(gym.org, gym.externalId);
+    if (!sourceGym || sourceGym.masterGymId) {
+      // Already linked or not found, skip
+      continue;
+    }
+
+    // Run matching for this unlinked gym
+    const result = await processGymMatches(sourceGym);
+    processed++;
+    autoLinked += result.autoLinked;
+    pendingCreated += result.pendingCreated;
+  }
+
+  return { processed, autoLinked, pendingCreated };
+}
+
+/**
  * Sync all JJWL gyms to database.
- * Fetches the full gym list from JJWL API and batch upserts to DynamoDB.
+ * Fetches the full gym list from JJWL API, batch upserts to DynamoDB,
+ * and runs fuzzy matching for unlinked gyms.
  */
 export async function syncJJWLGyms(): Promise<GymSyncResult> {
   try {
     const gyms = await fetchJJWLGyms();
     const saved = await batchUpsertGyms(gyms);
 
+    // Run matching for unlinked gyms
+    const matching = await runMatchingForGyms(gyms);
+    console.log(
+      `[GymSyncService] JJWL matching: ${matching.processed} processed, ${matching.autoLinked} auto-linked, ${matching.pendingCreated} pending`
+    );
+
     return {
       fetched: gyms.length,
       saved,
+      matching,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -109,6 +158,12 @@ export async function syncIBJJFGyms(
     // Batch upsert to database
     const saved = await batchUpsertGyms(gyms);
 
+    // Run matching for unlinked gyms
+    const matching = await runMatchingForGyms(gyms);
+    console.log(
+      `[GymSyncService] IBJJF matching: ${matching.processed} processed, ${matching.autoLinked} auto-linked, ${matching.pendingCreated} pending`
+    );
+
     // Update sync metadata
     await updateGymSyncMeta('IBJJF', totalRecords);
 
@@ -122,6 +177,7 @@ export async function syncIBJJFGyms(
       fetched: gyms.length,
       saved,
       duration,
+      matching,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
