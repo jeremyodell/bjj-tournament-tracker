@@ -200,8 +200,8 @@ Set `NEXT_PUBLIC_DEV_MODE=true` in frontend to bypass Cognito for local testing.
 ### Public
 - `GET /tournaments` - List tournaments (with filters)
 - `GET /tournaments/{id}` - Get tournament details
-- `GET /gyms/{id}` - Get master gym by ID
-- `GET /gyms/search?q=query` - Search master gyms by name prefix
+- `GET /master-gyms/{id}` - Get master gym by ID
+- `GET /master-gyms/search?q=query` - Search master gyms by name prefix
 
 ### Protected (requires Cognito JWT)
 - `GET /athletes` - List user's athletes

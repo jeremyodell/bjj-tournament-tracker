@@ -471,6 +471,94 @@ Resources:
         External:
           - '@aws-sdk/*'
 
+  MasterGymsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub bjj-tournament-tracker-master-gyms-${Stage}
+      Handler: dist/handlers/masterGyms.handler
+      CodeUri: .
+      Description: Handles master gym search and lookup (unified gyms across orgs)
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TournamentsTable
+      Events:
+        SearchMasterGyms:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /master-gyms/search
+            Method: GET
+        GetMasterGym:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /master-gyms/{id}
+            Method: GET
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/masterGyms.ts
+        External:
+          - '@aws-sdk/*'
+
+  AdminMatchesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub bjj-tournament-tracker-admin-matches-${Stage}
+      Handler: dist/handlers/adminMatches.handler
+      CodeUri: .
+      Description: Admin endpoints for gym match review (approve/reject pending matches)
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TournamentsTable
+      Events:
+        ListPendingMatches:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /admin/pending-matches
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        ApprovePendingMatch:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /admin/pending-matches/{id}/approve
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        RejectPendingMatch:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /admin/pending-matches/{id}/reject
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        UnlinkSourceGym:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /admin/master-gyms/{id}/unlink
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/adminMatches.ts
+        External:
+          - '@aws-sdk/*'
+
   FlightPricesFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -937,6 +1025,14 @@ Outputs:
   GymSyncFunctionArn:
     Description: Gym Sync Lambda Function ARN
     Value: !GetAtt GymSyncFunction.Arn
+
+  MasterGymsFunctionArn:
+    Description: Master Gyms Lambda Function ARN
+    Value: !GetAtt MasterGymsFunction.Arn
+
+  AdminMatchesFunctionArn:
+    Description: Admin Matches Lambda Function ARN
+    Value: !GetAtt AdminMatchesFunction.Arn
 
   AlertsTopicArn:
     Description: SNS Topic ARN for Lambda error alerts

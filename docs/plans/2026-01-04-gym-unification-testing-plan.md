@@ -180,18 +180,18 @@ curl -X POST "{API_URL}/admin/pending-matches/{matchId}/reject" \
 ### Public Endpoints
 
 ```bash
-# Search for gyms by name prefix
-curl -X GET "{API_URL}/gyms/search?q=gracie"
+# Search for master gyms by name prefix
+curl -X GET "{API_URL}/master-gyms/search?q=gracie"
 
 # Get specific master gym by ID
-curl -X GET "{API_URL}/gyms/{masterGymId}"
+curl -X GET "{API_URL}/master-gyms/{masterGymId}"
 ```
 
 **Checklist:**
 - [ ] `GET /admin/pending-matches` returns matches
 - [ ] `POST /admin/pending-matches/{id}/approve` creates master gym
 - [ ] `POST /admin/pending-matches/{id}/reject` marks as rejected
-- [ ] `GET /gyms/search?q=gracie` returns master gyms
+- [ ] `GET /master-gyms/search?q=gracie` returns master gyms
 
 ## AWS Permissions for Developers
 
