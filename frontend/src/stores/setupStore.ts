@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Athlete } from '@/lib/api';
+import type { Athlete, Gym } from '@/lib/api';
 
 interface AthleteInfo {
   athleteName?: string;
@@ -18,6 +18,10 @@ interface SetupState {
   belt: string;
   weight: string;
 
+  // Gym selection
+  selectedGym: Gym | null;
+  skippedGym: boolean;
+
   // Location
   location: string;
   lat: number | null;
@@ -28,6 +32,8 @@ interface SetupState {
 
   // Actions
   setAthleteInfo: (info: AthleteInfo) => void;
+  setGym: (gym: Gym | null) => void;
+  skipGym: () => void;
   setLocation: (location: string, lat?: number, lng?: number) => void;
   loadFromAthlete: (athlete: Athlete) => void;
   reset: () => void;
@@ -39,6 +45,8 @@ const initialState = {
   age: null as number | null,
   belt: '',
   weight: '',
+  selectedGym: null as Gym | null,
+  skippedGym: false,
   location: '',
   lat: null as number | null,
   lng: null as number | null,
@@ -62,6 +70,22 @@ export const useSetupStore = create<SetupState>((set, get) => ({
         isComplete: isSetupComplete(newState),
       };
     });
+  },
+
+  setGym: (gym) => {
+    set((state) => ({
+      ...state,
+      selectedGym: gym,
+      skippedGym: false,
+    }));
+  },
+
+  skipGym: () => {
+    set((state) => ({
+      ...state,
+      selectedGym: null,
+      skippedGym: true,
+    }));
   },
 
   setLocation: (location, lat, lng) => {
