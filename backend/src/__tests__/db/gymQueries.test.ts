@@ -3,6 +3,7 @@ import {
   upsertSourceGym,
   getSourceGym,
   searchGyms,
+  searchGymsAcrossOrgs,
   listGyms,
   upsertGymRoster,
   getGymRoster,
@@ -620,6 +621,188 @@ describe('gymQueries', () => {
         lastSyncAt: '2026-01-04T12:00:00.000Z',
         lastChangeAt: '2025-12-15T00:00:00.000Z',
       });
+    });
+  });
+
+  describe('searchGymsAcrossOrgs', () => {
+    it('searches both JJWL and IBJJF orgs and returns combined results', async () => {
+      const jjwlGyms: SourceGymItem[] = [
+        {
+          PK: 'SRCGYM#JJWL#100',
+          SK: 'META',
+          GSI1PK: 'GYMS',
+          GSI1SK: 'JJWL#Gracie Austin',
+          org: 'JJWL',
+          externalId: '100',
+          name: 'Gracie Austin',
+          masterGymId: null,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+      ];
+
+      const ibjjfGyms: SourceGymItem[] = [
+        {
+          PK: 'SRCGYM#IBJJF#200',
+          SK: 'META',
+          GSI1PK: 'GYMS',
+          GSI1SK: 'IBJJF#Gracie Barra Austin',
+          org: 'IBJJF',
+          externalId: '200',
+          name: 'Gracie Barra Austin',
+          masterGymId: null,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+      ];
+
+      // Mock both searchGyms calls (JJWL first, then IBJJF)
+      mockSend
+        .mockResolvedValueOnce({ Items: jjwlGyms } as never)
+        .mockResolvedValueOnce({ Items: ibjjfGyms } as never);
+
+      const results = await searchGymsAcrossOrgs('Gracie');
+
+      expect(results.length).toBeGreaterThanOrEqual(2);
+      expect(results.some(g => g.org === 'JJWL')).toBe(true);
+      expect(results.some(g => g.org === 'IBJJF')).toBe(true);
+    });
+
+    it('limits results to 20 total by default', async () => {
+      // Create 15 gyms for each org
+      const jjwlGyms: SourceGymItem[] = Array.from({ length: 15 }, (_, i) => ({
+        PK: `SRCGYM#JJWL#${i}`,
+        SK: 'META' as const,
+        GSI1PK: 'GYMS' as const,
+        GSI1SK: `JJWL#Academy ${i}`,
+        org: 'JJWL' as const,
+        externalId: `${i}`,
+        name: `Academy ${i}`,
+        masterGymId: null,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      }));
+
+      const ibjjfGyms: SourceGymItem[] = Array.from({ length: 15 }, (_, i) => ({
+        PK: `SRCGYM#IBJJF#${i}`,
+        SK: 'META' as const,
+        GSI1PK: 'GYMS' as const,
+        GSI1SK: `IBJJF#Academy ${i + 100}`,
+        org: 'IBJJF' as const,
+        externalId: `${i}`,
+        name: `Academy ${i + 100}`,
+        masterGymId: null,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      }));
+
+      mockSend
+        .mockResolvedValueOnce({ Items: jjwlGyms } as never)
+        .mockResolvedValueOnce({ Items: ibjjfGyms } as never);
+
+      const results = await searchGymsAcrossOrgs('A');
+
+      expect(results.length).toBeLessThanOrEqual(20);
+    });
+
+    it('returns empty array when no matches', async () => {
+      mockSend
+        .mockResolvedValueOnce({ Items: [] } as never)
+        .mockResolvedValueOnce({ Items: [] } as never);
+
+      const results = await searchGymsAcrossOrgs('ZZZNONEXISTENT');
+
+      expect(results).toEqual([]);
+    });
+
+    it('sorts combined results by name', async () => {
+      const jjwlGyms: SourceGymItem[] = [
+        {
+          PK: 'SRCGYM#JJWL#1',
+          SK: 'META',
+          GSI1PK: 'GYMS',
+          GSI1SK: 'JJWL#Charlie Academy',
+          org: 'JJWL',
+          externalId: '1',
+          name: 'Charlie Academy',
+          masterGymId: null,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+      ];
+
+      const ibjjfGyms: SourceGymItem[] = [
+        {
+          PK: 'SRCGYM#IBJJF#1',
+          SK: 'META',
+          GSI1PK: 'GYMS',
+          GSI1SK: 'IBJJF#Alpha BJJ',
+          org: 'IBJJF',
+          externalId: '1',
+          name: 'Alpha BJJ',
+          masterGymId: null,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+        {
+          PK: 'SRCGYM#IBJJF#2',
+          SK: 'META',
+          GSI1PK: 'GYMS',
+          GSI1SK: 'IBJJF#Bravo Martial Arts',
+          org: 'IBJJF',
+          externalId: '2',
+          name: 'Bravo Martial Arts',
+          masterGymId: null,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+      ];
+
+      mockSend
+        .mockResolvedValueOnce({ Items: jjwlGyms } as never)
+        .mockResolvedValueOnce({ Items: ibjjfGyms } as never);
+
+      const results = await searchGymsAcrossOrgs('A');
+
+      expect(results[0].name).toBe('Alpha BJJ');
+      expect(results[1].name).toBe('Bravo Martial Arts');
+      expect(results[2].name).toBe('Charlie Academy');
+    });
+
+    it('respects custom limit parameter', async () => {
+      const jjwlGyms: SourceGymItem[] = Array.from({ length: 5 }, (_, i) => ({
+        PK: `SRCGYM#JJWL#${i}`,
+        SK: 'META' as const,
+        GSI1PK: 'GYMS' as const,
+        GSI1SK: `JJWL#Gym ${i}`,
+        org: 'JJWL' as const,
+        externalId: `${i}`,
+        name: `Gym ${i}`,
+        masterGymId: null,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      }));
+
+      const ibjjfGyms: SourceGymItem[] = Array.from({ length: 5 }, (_, i) => ({
+        PK: `SRCGYM#IBJJF#${i}`,
+        SK: 'META' as const,
+        GSI1PK: 'GYMS' as const,
+        GSI1SK: `IBJJF#Gym ${i + 10}`,
+        org: 'IBJJF' as const,
+        externalId: `${i}`,
+        name: `Gym ${i + 10}`,
+        masterGymId: null,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      }));
+
+      mockSend
+        .mockResolvedValueOnce({ Items: jjwlGyms } as never)
+        .mockResolvedValueOnce({ Items: ibjjfGyms } as never);
+
+      const results = await searchGymsAcrossOrgs('Gym', 5);
+
+      expect(results.length).toBeLessThanOrEqual(5);
     });
   });
 });

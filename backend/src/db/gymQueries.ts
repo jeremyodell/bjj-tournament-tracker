@@ -89,6 +89,28 @@ export async function searchGyms(
 }
 
 /**
+ * Search gyms across all orgs (JJWL + IBJJF)
+ * Returns combined results sorted by name
+ */
+export async function searchGymsAcrossOrgs(
+  namePrefix: string,
+  limit = 20
+): Promise<SourceGymItem[]> {
+  // Search both orgs in parallel
+  const [jjwlGyms, ibjjfGyms] = await Promise.all([
+    searchGyms('JJWL', namePrefix, limit),
+    searchGyms('IBJJF', namePrefix, limit),
+  ]);
+
+  // Combine and sort by name
+  const combined = [...jjwlGyms, ...ibjjfGyms];
+  combined.sort((a, b) => a.name.localeCompare(b.name));
+
+  // Limit total results
+  return combined.slice(0, limit);
+}
+
+/**
  * List all gyms for an org (paginated)
  */
 export async function listGyms(
