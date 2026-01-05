@@ -33,20 +33,28 @@ bjj-tournament-tracker/
 │   ├── src/
 │   │   ├── app/             # Next.js App Router pages
 │   │   │   ├── (auth)/      # Auth pages (login, register)
-│   │   │   ├── (protected)/ # Auth-required pages (profile, wishlist)
+│   │   │   ├── (protected)/ # Auth-required pages (profile, wishlist, admin)
+│   │   │   │   └── admin/   # Admin pages (gym-matches)
 │   │   │   └── plan/        # Planner flow pages
 │   │   ├── components/      # React components
-│   │   ├── hooks/           # TanStack Query hooks
+│   │   │   └── admin/       # Admin components (GymMatchesPage)
+│   │   ├── hooks/           # TanStack Query hooks (useAdminMatches, etc.)
 │   │   ├── stores/          # Zustand stores
 │   │   ├── lib/             # Utilities, API client, types
 │   │   └── __tests__/       # Test files
 │   └── package.json
 ├── backend/                  # AWS SAM backend
 │   ├── src/
-│   │   ├── handlers/        # Lambda handlers
-│   │   ├── fetchers/        # Tournament data fetchers (IBJJF, JJWL)
-│   │   ├── db/              # DynamoDB client and types
+│   │   ├── handlers/        # Lambda handlers (athletes, tournaments, adminMatches, masterGyms)
+│   │   ├── fetchers/        # Tournament/gym data fetchers (IBJJF, JJWL)
+│   │   ├── db/              # DynamoDB client, types, and query modules
+│   │   │   ├── types.ts           # All entity types and key builders
+│   │   │   ├── gymQueries.ts      # Source gym queries
+│   │   │   ├── masterGymQueries.ts    # Master gym CRUD
+│   │   │   └── pendingMatchQueries.ts # Pending match CRUD
 │   │   └── services/        # Business logic
+│   │       ├── gymSyncService.ts      # Gym sync with change detection
+│   │       └── gymMatchingService.ts  # Fuzzy matching logic
 │   ├── scripts/             # Utility scripts
 │   ├── template.yaml        # SAM/CloudFormation template
 │   └── package.json
@@ -75,6 +83,10 @@ bjj-tournament-tracker/
 | Tournament | `TOURN#{org}#{id}` | `META` |
 | User Athlete | `USER#{userId}` | `ATHLETE#{athleteId}` |
 | User Wishlist | `USER#{userId}` | `WISH#{tournamentPK}` |
+| Source Gym | `SRCGYM#{org}#{externalId}` | `META` |
+| Master Gym | `MASTERGYM#{uuid}` | `META` |
+| Pending Match | `PENDINGMATCH#{uuid}` | `META` |
+| Gym Sync Meta | `GYMSYNC#{org}` | `META` |
 
 ### API Gateway
 - **Base URL (prod):** `https://api.bjj-tournament-tracker.com` (via CloudFormation output)
@@ -188,6 +200,8 @@ Set `NEXT_PUBLIC_DEV_MODE=true` in frontend to bypass Cognito for local testing.
 ### Public
 - `GET /tournaments` - List tournaments (with filters)
 - `GET /tournaments/{id}` - Get tournament details
+- `GET /gyms/{id}` - Get master gym by ID
+- `GET /gyms/search?q=query` - Search master gyms by name prefix
 
 ### Protected (requires Cognito JWT)
 - `GET /athletes` - List user's athletes
@@ -197,6 +211,12 @@ Set `NEXT_PUBLIC_DEV_MODE=true` in frontend to bypass Cognito for local testing.
 - `GET /wishlist` - List wishlisted tournaments
 - `POST /wishlist` - Add to wishlist
 - `DELETE /wishlist/{tournamentId}` - Remove from wishlist
+
+### Admin (requires Cognito JWT)
+- `GET /admin/pending-matches?status=pending` - List pending gym matches for review
+- `POST /admin/pending-matches/{id}/approve` - Approve match and create master gym
+- `POST /admin/pending-matches/{id}/reject` - Reject match
+- `POST /admin/master-gyms/{id}/unlink` - Unlink source gym from master
 
 ## Pre-Commit Requirements (MANDATORY)
 
@@ -240,9 +260,38 @@ sam build && sam deploy
 sam deploy --config-env prod --parameter-overrides GoogleClientSecret=YOUR_SECRET
 ```
 
+## Gym Unification System
+
+The system unifies gyms across IBJJF and JJWL into a single `MasterGym` entity using fuzzy matching.
+
+### How It Works
+1. **Source Gyms:** Each org (IBJJF, JJWL) stores gyms as `SourceGym` entities
+2. **Fuzzy Matching:** `gymMatchingService.ts` compares gyms using:
+   - Levenshtein distance for name similarity (0-100 score)
+   - City boost (+15 if city appears in gym name)
+   - Affiliation boost (+10 for matching BJJ affiliations like "Gracie Barra", "Alliance")
+3. **Auto-linking:** Matches ≥90% are automatically linked to a new `MasterGym`
+4. **Admin Review:** Matches 70-89% create `PendingMatch` records for manual review
+5. **Master Gym:** Unified gym entity that links multiple source gyms
+
+### Key Files
+- `backend/src/services/gymMatchingService.ts` - Fuzzy matching logic
+- `backend/src/services/gymSyncService.ts` - Gym sync with matching integration
+- `backend/src/db/masterGymQueries.ts` - Master gym CRUD
+- `backend/src/db/pendingMatchQueries.ts` - Pending match CRUD
+- `backend/src/handlers/adminMatches.ts` - Admin review endpoints
+- `backend/src/handlers/masterGyms.ts` - Public gym search
+- `frontend/src/app/(protected)/admin/gym-matches/page.tsx` - Admin review UI
+- `frontend/src/components/admin/GymMatchesPage.tsx` - Match review component
+- `frontend/src/hooks/useAdminMatches.ts` - TanStack Query hooks for admin
+
+### Athlete Gym Linking
+Athletes can be linked to a `MasterGym` via the `masterGymId` field, allowing cross-org gym association.
+
 ## Design Decisions
 
 1. **Planner-first flow:** Anonymous users can fill athlete info and see tournaments before creating account
 2. **Single-table DynamoDB:** All entities in one table with PK/SK patterns
 3. **Cognito for auth:** Managed user pools, JWT tokens for API auth
 4. **App Router:** Next.js 15 with route groups for auth/protected pages
+5. **Gym unification:** Fuzzy matching to unify gyms across orgs with admin review for edge cases
