@@ -76,6 +76,10 @@ export interface Athlete {
   beltRank: string | null;
   birthYear: number | null;
   weightClass: string | null;
+  homeAirport: string | null;
+  gymSourceId: string | null; // e.g., "JJWL#5713" or "IBJJF#12345"
+  gymName: string | null; // Denormalized display name
+  masterGymId: string | null; // Links to unified master gym
   createdAt: string;
   updatedAt: string;
 }
@@ -86,7 +90,10 @@ export interface CreateAthleteInput {
   birthYear?: number;
   gender?: string;
   weight?: number;
-  gymName?: string;
+  homeAirport?: string;
+  gymSourceId?: string; // e.g., "JJWL#5713" or "IBJJF#12345"
+  gymName?: string; // Display name for the gym
+  masterGymId?: string; // Links to unified master gym
 }
 
 export async function fetchAthletes(accessToken: string): Promise<{ athletes: Athlete[] }> {
