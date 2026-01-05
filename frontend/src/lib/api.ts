@@ -131,4 +131,59 @@ export async function registerAirport(accessToken: string, airport: string): Pro
   return response.data;
 }
 
+// Admin - Pending Match types and API functions
+export interface MatchSignals {
+  nameSimilarity: number;
+  cityBoost: number;
+  affiliationBoost: number;
+}
+
+export interface PendingMatch {
+  id: string;
+  sourceGym1Id: string;
+  sourceGym1Name: string;
+  sourceGym2Id: string;
+  sourceGym2Name: string;
+  confidence: number;
+  signals: MatchSignals;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+}
+
+export async function fetchPendingMatches(
+  accessToken: string,
+  status: 'pending' | 'approved' | 'rejected' = 'pending'
+): Promise<{ matches: PendingMatch[] }> {
+  const response = await api.get(`/admin/pending-matches?status=${status}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  return response.data;
+}
+
+export async function approveMatch(
+  accessToken: string,
+  matchId: string
+): Promise<{ masterGymId: string; message: string }> {
+  const response = await api.post(
+    `/admin/pending-matches/${matchId}/approve`,
+    {},
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  return response.data;
+}
+
+export async function rejectMatch(
+  accessToken: string,
+  matchId: string
+): Promise<{ message: string }> {
+  const response = await api.post(
+    `/admin/pending-matches/${matchId}/reject`,
+    {},
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  return response.data;
+}
+
 export default api;

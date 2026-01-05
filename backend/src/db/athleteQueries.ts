@@ -14,6 +14,7 @@ export interface CreateAthleteInput {
   homeAirport?: string;
   gymSourceId?: string; // e.g., "JJWL#5713"
   gymDisplayName?: string; // Maps to gymName on AthleteItem
+  masterGymId?: string; // Links to unified master gym
 }
 
 export async function getUserAthletes(userId: string): Promise<AthleteItem[]> {
@@ -48,6 +49,7 @@ export async function createAthlete(
     homeAirport: input.homeAirport?.trim().toUpperCase() || null,
     gymSourceId: input.gymSourceId || null,
     gymName: input.gymDisplayName || null,
+    masterGymId: input.masterGymId || null,
     createdAt: now,
     updatedAt: now,
   };
@@ -95,6 +97,9 @@ export async function updateAthlete(
     gymName: input.gymDisplayName !== undefined
       ? (input.gymDisplayName || null)
       : existing.gymName,
+    masterGymId: input.masterGymId !== undefined
+      ? (input.masterGymId || null)
+      : existing.masterGymId,
     updatedAt: new Date().toISOString(),
   };
 

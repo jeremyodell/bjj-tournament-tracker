@@ -6,6 +6,7 @@ jest.mock('../../fetchers/jjwlRosterFetcher.js');
 jest.mock('../../fetchers/ibjjfGymFetcher.js');
 jest.mock('../../db/gymQueries.js');
 jest.mock('../../db/queries.js');
+jest.mock('../../services/gymMatchingService.js');
 
 import {
   syncJJWLGyms,
@@ -19,8 +20,9 @@ import * as jjwlRosterFetcher from '../../fetchers/jjwlRosterFetcher.js';
 import * as ibjjfGymFetcher from '../../fetchers/ibjjfGymFetcher.js';
 import * as gymQueries from '../../db/gymQueries.js';
 import * as queries from '../../db/queries.js';
+import * as gymMatchingService from '../../services/gymMatchingService.js';
 import type { NormalizedGym, IBJJFNormalizedGym } from '../../fetchers/types.js';
-import type { TournamentItem, GymSyncMetaItem } from '../../db/types.js';
+import type { TournamentItem, GymSyncMetaItem, SourceGymItem } from '../../db/types.js';
 
 describe('gymSyncService', () => {
   beforeEach(() => {
@@ -28,7 +30,20 @@ describe('gymSyncService', () => {
   });
 
   describe('syncJJWLGyms', () => {
-    it('fetches and saves gyms successfully', async () => {
+    const createMockSourceGym = (gym: NormalizedGym, masterGymId: string | null = null): SourceGymItem => ({
+      PK: `SRCGYM#${gym.org}#${gym.externalId}`,
+      SK: 'META',
+      GSI1PK: 'GYMS',
+      GSI1SK: `${gym.org}#${gym.name}`,
+      org: gym.org,
+      externalId: gym.externalId,
+      name: gym.name,
+      masterGymId,
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    });
+
+    it('fetches, saves, and runs matching for gyms successfully', async () => {
       const mockGyms: NormalizedGym[] = [
         { org: 'JJWL', externalId: '1', name: 'Gym A' },
         { org: 'JJWL', externalId: '2', name: 'Gym B' },
@@ -36,17 +51,56 @@ describe('gymSyncService', () => {
 
       const fetchMock = jest.spyOn(jjwlGymFetcher, 'fetchJJWLGyms');
       const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
+      const getSourceGymMock = jest.spyOn(gymQueries, 'getSourceGym');
+      const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
 
       fetchMock.mockResolvedValue(mockGyms);
       batchUpsertMock.mockResolvedValue(2);
+      // Return unlinked gyms (masterGymId = null)
+      getSourceGymMock.mockImplementation(async (_org, externalId) => {
+        const gym = mockGyms.find(g => g.externalId === externalId);
+        return gym ? createMockSourceGym(gym) : null;
+      });
+      processMatchesMock.mockResolvedValue({ autoLinked: 0, pendingCreated: 1 });
 
       const result = await syncJJWLGyms();
 
       expect(fetchMock).toHaveBeenCalled();
       expect(batchUpsertMock).toHaveBeenCalledWith(mockGyms);
+      expect(processMatchesMock).toHaveBeenCalledTimes(2);
       expect(result.fetched).toBe(2);
       expect(result.saved).toBe(2);
+      expect(result.matching).toEqual({
+        processed: 2,
+        autoLinked: 0,
+        pendingCreated: 2,
+      });
       expect(result.error).toBeUndefined();
+    });
+
+    it('skips matching for gyms already linked to master', async () => {
+      const mockGyms: NormalizedGym[] = [
+        { org: 'JJWL', externalId: '1', name: 'Gym A' },
+      ];
+
+      const fetchMock = jest.spyOn(jjwlGymFetcher, 'fetchJJWLGyms');
+      const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
+      const getSourceGymMock = jest.spyOn(gymQueries, 'getSourceGym');
+      const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
+
+      fetchMock.mockResolvedValue(mockGyms);
+      batchUpsertMock.mockResolvedValue(1);
+      // Return linked gym (masterGymId is set)
+      getSourceGymMock.mockResolvedValue(createMockSourceGym(mockGyms[0], 'master-123'));
+
+      const result = await syncJJWLGyms();
+
+      expect(processMatchesMock).not.toHaveBeenCalled();
+      expect(result.matching).toEqual({
+        processed: 0,
+        autoLinked: 0,
+        pendingCreated: 0,
+      });
     });
 
     it('handles fetch errors gracefully', async () => {
@@ -311,6 +365,19 @@ describe('gymSyncService', () => {
       lastChangeAt: '2026-01-01T00:00:00Z',
     };
 
+    const createMockSourceGym = (gym: IBJJFNormalizedGym, masterGymId: string | null = null): SourceGymItem => ({
+      PK: `SRCGYM#${gym.org}#${gym.externalId}`,
+      SK: 'META',
+      GSI1PK: 'GYMS',
+      GSI1SK: `${gym.org}#${gym.name}`,
+      org: gym.org,
+      externalId: gym.externalId,
+      name: gym.name,
+      masterGymId,
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    });
+
     it('should skip sync when totalRecords unchanged', async () => {
       const fetchCountMock = jest.spyOn(ibjjfGymFetcher, 'fetchIBJJFGymCount');
       const fetchAllMock = jest.spyOn(ibjjfGymFetcher, 'fetchAllIBJJFGyms');
@@ -338,18 +405,30 @@ describe('gymSyncService', () => {
       const getSyncMetaMock = jest.spyOn(gymQueries, 'getGymSyncMeta');
       const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
       const updateSyncMetaMock = jest.spyOn(gymQueries, 'updateGymSyncMeta');
+      const getSourceGymMock = jest.spyOn(gymQueries, 'getSourceGym');
+      const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
 
       fetchCountMock.mockResolvedValue(8600); // Changed from 8573
       getSyncMetaMock.mockResolvedValue(mockSyncMeta);
       fetchAllMock.mockResolvedValue(mockGyms);
       batchUpsertMock.mockResolvedValue(2);
       updateSyncMetaMock.mockResolvedValue(undefined);
+      getSourceGymMock.mockImplementation(async (_org, externalId) => {
+        const gym = mockGyms.find(g => g.externalId === externalId);
+        return gym ? createMockSourceGym(gym) : null;
+      });
+      processMatchesMock.mockResolvedValue({ autoLinked: 1, pendingCreated: 0 });
 
       const result = await syncIBJJFGyms();
 
       expect(result.skipped).toBe(false);
       expect(result.fetched).toBe(2);
       expect(result.saved).toBe(2);
+      expect(result.matching).toEqual({
+        processed: 2,
+        autoLinked: 2,
+        pendingCreated: 0,
+      });
       expect(fetchAllMock).toHaveBeenCalled();
       expect(updateSyncMetaMock).toHaveBeenCalledWith('IBJJF', 8600);
     });
@@ -364,12 +443,16 @@ describe('gymSyncService', () => {
       const getSyncMetaMock = jest.spyOn(gymQueries, 'getGymSyncMeta');
       const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
       const updateSyncMetaMock = jest.spyOn(gymQueries, 'updateGymSyncMeta');
+      const getSourceGymMock = jest.spyOn(gymQueries, 'getSourceGym');
+      const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
 
       fetchCountMock.mockResolvedValue(8573);
       getSyncMetaMock.mockResolvedValue(null); // First sync
       fetchAllMock.mockResolvedValue(mockGyms);
       batchUpsertMock.mockResolvedValue(1);
       updateSyncMetaMock.mockResolvedValue(undefined);
+      getSourceGymMock.mockResolvedValue(createMockSourceGym(mockGyms[0]));
+      processMatchesMock.mockResolvedValue({ autoLinked: 0, pendingCreated: 0 });
 
       const result = await syncIBJJFGyms();
 
@@ -391,6 +474,7 @@ describe('gymSyncService', () => {
       fetchAllMock.mockResolvedValue(mockGyms);
       batchUpsertMock.mockResolvedValue(0);
       updateSyncMetaMock.mockResolvedValue(undefined);
+      // No matching mocks needed since mockGyms is empty
 
       const result = await syncIBJJFGyms({ forceSync: true });
 
