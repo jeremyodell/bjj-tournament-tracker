@@ -1,13 +1,17 @@
 'use client';
 
 import type { Tournament } from '@/lib/types';
+import type { GymRoster } from '@/lib/api';
+import { TeammatesBadge } from './TeammatesBadge';
 
 interface TournamentCardProps {
   tournament: Tournament;
   index?: number;
+  gymRoster?: GymRoster | null;
+  isLoadingRoster?: boolean;
 }
 
-export function TournamentCard({ tournament, index }: TournamentCardProps) {
+export function TournamentCard({ tournament, index, gymRoster, isLoadingRoster }: TournamentCardProps) {
   const getDaysUntil = (start: string) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -180,8 +184,8 @@ export function TournamentCard({ tournament, index }: TournamentCardProps) {
 
           {/* Bottom Section */}
           <div className="flex items-center justify-between mt-4 pt-4 border-t" style={{ borderColor: 'var(--glass-border)' }}>
-            {/* Event type tags */}
-            <div className="flex flex-wrap gap-2">
+            {/* Event type tags and teammates badge */}
+            <div className="flex flex-wrap items-center gap-2">
               {tournament.gi && (
                 <div className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
                   GI
@@ -197,6 +201,12 @@ export function TournamentCard({ tournament, index }: TournamentCardProps) {
                   KIDS
                 </div>
               )}
+              <TeammatesBadge
+                roster={gymRoster}
+                org={tournament.org as 'JJWL' | 'IBJJF'}
+                isLoading={isLoadingRoster}
+                tournamentId={tournament.id}
+              />
             </div>
 
             {/* View Details Link */}
