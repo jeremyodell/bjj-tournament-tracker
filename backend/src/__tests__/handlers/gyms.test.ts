@@ -23,13 +23,64 @@ describe('gyms handler', () => {
   });
 
   describe('GET /gyms (search)', () => {
-    it('returns 400 if org query param is missing', async () => {
-      const event = createGymsSearchEvent({ search: 'Pablo' });
+    it('searches across all orgs when org param is missing', async () => {
+      const mockGyms = [
+        {
+          org: 'IBJJF' as const,
+          externalId: '200',
+          name: 'Alpha Academy',
+          PK: 'SRCGYM#IBJJF#200',
+          SK: 'META' as const,
+          GSI1PK: 'GYMS' as const,
+          GSI1SK: 'IBJJF#Alpha Academy',
+          masterGymId: null,
+          createdAt: '2026-01-01',
+          updatedAt: '2026-01-01',
+        },
+        {
+          org: 'JJWL' as const,
+          externalId: '100',
+          name: 'Beta BJJ',
+          PK: 'SRCGYM#JJWL#100',
+          SK: 'META' as const,
+          GSI1PK: 'GYMS' as const,
+          GSI1SK: 'JJWL#Beta BJJ',
+          masterGymId: null,
+          createdAt: '2026-01-01',
+          updatedAt: '2026-01-01',
+        },
+      ];
+      jest.spyOn(gymQueries, 'searchGymsAcrossOrgs').mockResolvedValue(mockGyms);
+
+      const event = createGymsSearchEvent({ search: 'Academy' });
       const result = await handler(event, context);
 
-      expect(result.statusCode).toBe(400);
-      const body = parseResponseBody<{ error: string; message: string }>(result);
-      expect(body.error).toBe('VALIDATION_ERROR');
+      expect(result.statusCode).toBe(200);
+      expect(gymQueries.searchGymsAcrossOrgs).toHaveBeenCalledWith('Academy');
+      const body = parseResponseBody<{
+        gyms: Array<{ org: string; externalId: string; name: string }>;
+      }>(result);
+      expect(body.gyms).toHaveLength(2);
+      expect(body.gyms[0]).toEqual({
+        org: 'IBJJF',
+        externalId: '200',
+        name: 'Alpha Academy',
+      });
+      expect(body.gyms[1]).toEqual({
+        org: 'JJWL',
+        externalId: '100',
+        name: 'Beta BJJ',
+      });
+    });
+
+    it('searches across all orgs with empty search param', async () => {
+      jest.spyOn(gymQueries, 'searchGymsAcrossOrgs').mockResolvedValue([]);
+
+      const event = createGymsSearchEvent({});
+      const result = await handler(event, context);
+
+      expect(result.statusCode).toBe(200);
+      expect(gymQueries.searchGymsAcrossOrgs).toHaveBeenCalledWith('');
     });
 
     it('returns 400 if org is invalid', async () => {
@@ -252,18 +303,18 @@ describe('gyms handler', () => {
 
   describe('Response headers', () => {
     it('includes Content-Type header', async () => {
-      jest.spyOn(gymQueries, 'searchGyms').mockResolvedValue([]);
+      jest.spyOn(gymQueries, 'searchGymsAcrossOrgs').mockResolvedValue([]);
 
-      const event = createGymsSearchEvent({ org: 'JJWL' });
+      const event = createGymsSearchEvent({});
       const result = await handler(event, context);
 
       expect(result.headers!['Content-Type']).toBe('application/json');
     });
 
     it('includes CORS headers', async () => {
-      jest.spyOn(gymQueries, 'searchGyms').mockResolvedValue([]);
+      jest.spyOn(gymQueries, 'searchGymsAcrossOrgs').mockResolvedValue([]);
 
-      const event = createGymsSearchEvent({ org: 'JJWL' });
+      const event = createGymsSearchEvent({});
       const result = await handler(event, context);
 
       expect(result.headers!['Access-Control-Allow-Origin']).toBe('*');

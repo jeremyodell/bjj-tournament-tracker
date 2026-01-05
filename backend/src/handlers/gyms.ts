@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { withErrorHandler, jsonResponse } from './middleware/errorHandler.js';
-import { searchGyms, getSourceGym, getGymRoster } from '../db/gymQueries.js';
+import { searchGyms, searchGymsAcrossOrgs, getSourceGym, getGymRoster } from '../db/gymQueries.js';
 import { syncGymRoster } from '../services/gymSyncService.js';
 import { ValidationError, NotFoundError } from '../shared/errors.js';
 
@@ -20,15 +20,15 @@ const gymsHandler: AsyncHandler = async (event) => {
     const searchQuery = event.queryStringParameters?.search || '';
     const orgFilter = event.queryStringParameters?.org as 'JJWL' | 'IBJJF' | undefined;
 
-    if (!orgFilter) {
-      throw new ValidationError('org query parameter is required (JJWL or IBJJF)');
-    }
-
-    if (orgFilter !== 'JJWL' && orgFilter !== 'IBJJF') {
+    // If org is provided but invalid, reject
+    if (orgFilter && orgFilter !== 'JJWL' && orgFilter !== 'IBJJF') {
       throw new ValidationError('org must be JJWL or IBJJF');
     }
 
-    const gyms = await searchGyms(orgFilter, searchQuery);
+    // Search by org if provided, otherwise search across all orgs
+    const gyms = orgFilter
+      ? await searchGyms(orgFilter, searchQuery)
+      : await searchGymsAcrossOrgs(searchQuery);
 
     return jsonResponse(200, {
       gyms: gyms.map((g) => ({

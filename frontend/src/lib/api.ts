@@ -76,6 +76,10 @@ export interface Athlete {
   beltRank: string | null;
   birthYear: number | null;
   weightClass: string | null;
+  homeAirport: string | null;
+  gymSourceId: string | null; // e.g., "JJWL#5713" or "IBJJF#12345"
+  gymName: string | null; // Denormalized display name
+  masterGymId: string | null; // Links to unified master gym
   createdAt: string;
   updatedAt: string;
 }
@@ -86,7 +90,10 @@ export interface CreateAthleteInput {
   birthYear?: number;
   gender?: string;
   weight?: number;
-  gymName?: string;
+  homeAirport?: string;
+  gymSourceId?: string; // e.g., "JJWL#5713" or "IBJJF#12345"
+  gymName?: string; // Display name for the gym
+  masterGymId?: string; // Links to unified master gym
 }
 
 export async function fetchAthletes(accessToken: string): Promise<{ athletes: Athlete[] }> {
@@ -127,6 +134,45 @@ export async function registerAirport(accessToken: string, airport: string): Pro
   const response = await api.post('/airports',
     { airport },
     { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  return response.data;
+}
+
+// Gym types and API functions
+export interface Gym {
+  org: 'JJWL' | 'IBJJF';
+  externalId: string;
+  name: string;
+}
+
+export interface RosterAthlete {
+  name: string;
+  belt: string;
+  ageDiv: string;
+  weight: string;
+  gender: string;
+}
+
+export interface GymRoster {
+  gymExternalId: string;
+  gymName: string | null;
+  athletes: RosterAthlete[];
+  athleteCount: number;
+  fetchedAt: string | null;
+}
+
+export async function searchGyms(query: string): Promise<Gym[]> {
+  const response = await api.get<{ gyms: Gym[] }>(`/gyms?search=${encodeURIComponent(query)}`);
+  return response.data.gyms;
+}
+
+export async function fetchGymRoster(
+  org: string,
+  externalId: string,
+  tournamentId: string
+): Promise<GymRoster> {
+  const response = await api.get<GymRoster>(
+    `/gyms/${encodeURIComponent(org)}/${encodeURIComponent(externalId)}/roster/${encodeURIComponent(tournamentId)}`
   );
   return response.data;
 }
