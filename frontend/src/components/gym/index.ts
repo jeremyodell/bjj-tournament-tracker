@@ -1,0 +1,1 @@
+export { GymSearchAutocomplete } from './GymSearchAutocomplete';
