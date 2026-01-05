@@ -138,6 +138,45 @@ export async function registerAirport(accessToken: string, airport: string): Pro
   return response.data;
 }
 
+// Gym types and API functions
+export interface Gym {
+  org: 'JJWL' | 'IBJJF';
+  externalId: string;
+  name: string;
+}
+
+export interface RosterAthlete {
+  name: string;
+  belt: string;
+  ageDiv: string;
+  weight: string;
+  gender: string;
+}
+
+export interface GymRoster {
+  gymExternalId: string;
+  gymName: string | null;
+  athletes: RosterAthlete[];
+  athleteCount: number;
+  fetchedAt: string | null;
+}
+
+export async function searchGyms(query: string): Promise<Gym[]> {
+  const response = await api.get<{ gyms: Gym[] }>(`/gyms?search=${encodeURIComponent(query)}`);
+  return response.data.gyms;
+}
+
+export async function fetchGymRoster(
+  org: string,
+  externalId: string,
+  tournamentId: string
+): Promise<GymRoster> {
+  const response = await api.get<GymRoster>(
+    `/gyms/${encodeURIComponent(org)}/${encodeURIComponent(externalId)}/roster/${encodeURIComponent(tournamentId)}`
+  );
+  return response.data;
+}
+
 // Admin - Pending Match types and API functions
 export interface MatchSignals {
   nameSimilarity: number;
