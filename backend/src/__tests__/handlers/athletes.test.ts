@@ -93,6 +93,7 @@ function createMockAthlete(overrides: Partial<AthleteItem> = {}): AthleteItem {
     homeAirport: null,
     gymSourceId: null,
     gymName: null,
+    masterGymId: null,
     createdAt: '2025-01-01T00:00:00Z',
     updatedAt: '2025-01-01T00:00:00Z',
     ...overrides,
