@@ -981,6 +981,57 @@ Resources:
       AlarmActions:
         - !Ref AlertsTopic
 
+  # ============================================
+  # Roster Sync Infrastructure
+  # ============================================
+  RosterSyncFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub bjj-tournament-tracker-roster-sync-${Stage}
+      Handler: dist/handlers/rosterSync.handler
+      CodeUri: .
+      Description: Daily pre-fetch of rosters for wishlisted tournaments
+      Timeout: 600
+      MemorySize: 512
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TournamentsTable
+      Events:
+        DailySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 3 * * ? *)
+            Description: Daily roster sync at 3 AM UTC
+            Enabled: true
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/rosterSync.ts
+        External:
+          - '@aws-sdk/*'
+
+  RosterSyncFunctionErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Stage}-roster-sync-function-errors
+      AlarmDescription: Alarm when Roster Sync function has errors
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref RosterSyncFunction
+      AlarmActions:
+        - !Ref AlertsTopic
+
 Conditions:
   IsProd: !Equals
     - !Ref Stage
@@ -1025,6 +1076,10 @@ Outputs:
   GymSyncFunctionArn:
     Description: Gym Sync Lambda Function ARN
     Value: !GetAtt GymSyncFunction.Arn
+
+  RosterSyncFunctionArn:
+    Description: Roster Sync Lambda Function ARN
+    Value: !GetAtt RosterSyncFunction.Arn
 
   MasterGymsFunctionArn:
     Description: Master Gyms Lambda Function ARN

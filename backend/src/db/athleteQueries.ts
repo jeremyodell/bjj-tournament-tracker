@@ -1,4 +1,4 @@
-import { QueryCommand, PutCommand, DeleteCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { QueryCommand, PutCommand, DeleteCommand, GetCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { ulid } from 'ulid';
 import { docClient, TABLE_NAME } from './client.js';
 import { buildUserPK, buildAthleteSK } from './types.js';
@@ -119,4 +119,34 @@ export async function deleteAthlete(userId: string, athleteId: string): Promise<
       SK: buildAthleteSK(athleteId),
     },
   }));
+}
+
+/**
+ * Get all athletes that have a gym association (gymSourceId is set).
+ * Only returns athletes with JJWL gyms (roster sync not supported for IBJJF yet).
+ *
+ * @returns Array of AthleteItem records with gymSourceId set
+ */
+export async function getAllAthletesWithGyms(): Promise<AthleteItem[]> {
+  const allAthletes: AthleteItem[] = [];
+  let lastKey: Record<string, unknown> | undefined;
+
+  do {
+    const command = new ScanCommand({
+      TableName: TABLE_NAME,
+      FilterExpression: 'begins_with(SK, :athletePrefix) AND attribute_exists(gymSourceId) AND gymSourceId <> :nullVal AND begins_with(gymSourceId, :jjwlPrefix)',
+      ExpressionAttributeValues: {
+        ':athletePrefix': 'ATHLETE#',
+        ':nullVal': '',
+        ':jjwlPrefix': 'JJWL#',
+      },
+      ExclusiveStartKey: lastKey,
+    });
+
+    const result = await docClient.send(command);
+    allAthletes.push(...((result.Items || []) as AthleteItem[]));
+    lastKey = result.LastEvaluatedKey;
+  } while (lastKey);
+
+  return allAthletes;
 }
