@@ -1,12 +1,14 @@
 'use client';
 
 import { useMemo } from 'react';
+import { Calendar } from 'lucide-react';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useTournaments } from '@/hooks/useTournaments';
 import { ScoreboardTournamentCard } from './ScoreboardTournamentCard';
 import { TournamentGridSkeleton } from './TournamentCardSkeleton';
 import { ErrorState, EmptyState } from './ErrorState';
 import { getTournamentPK } from '@/lib/tournamentUtils';
+import { generateBulkICS, downloadICS } from '@/lib/calendar';
 import Link from 'next/link';
 
 export function WishlistPage() {
@@ -47,6 +49,14 @@ export function WishlistPage() {
       return wishlistPKs.has(tournamentPK);
     });
   }, [wishlistData, tournamentsData]);
+
+  // Handler for bulk calendar export
+  const handleBulkExport = () => {
+    if (wishlistedTournaments.length === 0) return;
+
+    const icsContent = generateBulkICS(wishlistedTournaments);
+    downloadICS(icsContent, 'my-tournament-schedule');
+  };
 
   // Loading state
   if (wishlistLoading || tournamentsLoading) {
@@ -101,12 +111,31 @@ export function WishlistPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">My Wishlist</h1>
-        <p className="text-sm text-muted-foreground">
-          Tracking {wishlistedTournaments.length} tournament
-          {wishlistedTournaments.length !== 1 ? 's' : ''}
-        </p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">My Wishlist</h1>
+          <p className="text-sm text-muted-foreground">
+            Tracking {wishlistedTournaments.length} tournament
+            {wishlistedTournaments.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+
+        {/* Bulk Export Button */}
+        {wishlistedTournaments.length > 0 && (
+          <button
+            onClick={handleBulkExport}
+            className="flex items-center gap-2 px-4 py-2.5 rounded text-sm font-bold tracking-wide transition-all duration-200 hover:scale-105"
+            style={{
+              fontFamily: 'var(--font-mono-display)',
+              background: 'var(--scoreboard-yellow)',
+              color: '#000',
+              border: '1px solid var(--scoreboard-yellow)',
+            }}
+          >
+            <Calendar className="w-4 h-4" />
+            EXPORT ALL TO CALENDAR
+          </button>
+        )}
       </div>
 
       {/* Responsive grid: 1 col on mobile, 2 on tablet, 3 on desktop */}

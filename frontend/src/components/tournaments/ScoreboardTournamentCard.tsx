@@ -2,13 +2,14 @@
 
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Calendar, Star } from 'lucide-react';
 import type { Tournament } from '@/lib/types';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useAddToWishlist } from '@/hooks/useAddToWishlist';
 import { useRemoveFromWishlist } from '@/hooks/useRemoveFromWishlist';
 import { useAuthStore } from '@/stores/authStore';
 import { getTournamentPK, getDaysUntilTournament, formatTournamentDate } from '@/lib/tournamentUtils';
+import { generateTournamentICS, downloadICS } from '@/lib/calendar';
 
 interface ScoreboardTournamentCardProps {
   tournament: Tournament;
@@ -57,6 +58,17 @@ export function ScoreboardTournamentCard({ tournament, index }: ScoreboardTourna
     }
   };
 
+  const handleCalendarExport = () => {
+    // Generate .ics file and trigger download
+    const icsContent = generateTournamentICS(tournament);
+    // Create slug from tournament name for filename
+    const slug = tournament.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+    downloadICS(icsContent, slug);
+  };
+
   return (
     <div
       className="group relative border transition-all duration-200 hover:-translate-y-1"
@@ -70,6 +82,27 @@ export function ScoreboardTournamentCard({ tournament, index }: ScoreboardTourna
         animationDelay: `${(index || 0) * 50}ms`,
       }}
     >
+      {/* Star Badge - Only show for tracked tournaments */}
+      {isTracked && (
+        <div className="absolute top-3 left-3 z-10">
+          <div
+            className="flex items-center justify-center w-7 h-7 rounded-full"
+            style={{
+              background: 'rgba(0, 0, 0, 0.6)',
+              border: '1px solid var(--scoreboard-yellow)',
+            }}
+          >
+            <Star
+              className="w-4 h-4 fill-current"
+              style={{
+                color: 'var(--scoreboard-yellow)',
+                filter: 'drop-shadow(0 0 8px var(--scoreboard-yellow-glow))',
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* LED Status Indicator */}
       <div className="absolute top-3 right-3 flex items-center gap-1.5">
         <div
@@ -250,6 +283,23 @@ export function ScoreboardTournamentCard({ tournament, index }: ScoreboardTourna
               'TRACK'
             )}
           </button>
+
+          {/* Calendar Export Button - Only show for tracked tournaments */}
+          {isTracked && (
+            <button
+              onClick={handleCalendarExport}
+              className="p-2.5 rounded transition-all duration-200 hover:scale-110"
+              style={{
+                background: `${orgColor}20`,
+                border: `1px solid ${orgColor}40`,
+                color: orgColor,
+              }}
+              title="Add to Calendar"
+              aria-label="Add to Calendar"
+            >
+              <Calendar className="w-4 h-4" />
+            </button>
+          )}
 
           {/* Who's Going Counter - Hidden until gym registration features are added */}
           {false && (
