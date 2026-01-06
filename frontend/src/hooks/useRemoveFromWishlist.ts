@@ -55,8 +55,10 @@ export function useRemoveFromWishlist() {
     },
 
     // Always refetch after success or error
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['wishlist'] });
+    onSettled: async () => {
+      // Use refetchQueries instead of invalidateQueries to force immediate refetch
+      // invalidateQueries only marks as stale but won't refetch with staleTime set
+      await queryClient.refetchQueries({ queryKey: ['wishlist'] });
     },
   });
 }

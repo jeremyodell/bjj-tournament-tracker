@@ -7,6 +7,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 5000, // 5 second timeout for all requests
 });
 
 export async function fetchTournaments(

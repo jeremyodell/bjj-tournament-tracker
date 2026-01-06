@@ -46,6 +46,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
             staleTime: 5 * 60 * 1000,
             retry: 2,
           },
+          mutations: {
+            retry: false, // Don't retry mutations on network errors
+            networkMode: 'always', // Attempt mutations even when offline (let axios timeout handle it)
+          },
         },
       })
   );
