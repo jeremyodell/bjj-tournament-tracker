@@ -1,14 +1,20 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useTournaments } from '@/hooks/useTournaments';
 import { useFilterParams } from '@/hooks/useFilterParams';
-import { TournamentCard } from './TournamentCard';
+import { useWishlist } from '@/hooks/useWishlist';
+import { useAuthStore } from '@/stores/authStore';
+import { ScoreboardTournamentCard } from './ScoreboardTournamentCard';
 import { TournamentGridSkeleton } from './TournamentCardSkeleton';
 import { ErrorState, EmptyState } from './ErrorState';
+import { TrackedFilter, type TrackedFilterValue } from './TrackedFilter';
+import { getTournamentPK } from '@/lib/tournamentUtils';
 
 export function TournamentList() {
   const { filters, clearAll } = useFilterParams();
+  const { isAuthenticated } = useAuthStore();
+  const [trackedFilter, setTrackedFilter] = useState<TrackedFilterValue>('all');
 
   const {
     data,
@@ -21,10 +27,36 @@ export function TournamentList() {
     isFetchingNextPage,
   } = useTournaments(filters);
 
+  // Fetch wishlist if authenticated
+  const { data: wishlistData } = useWishlist();
+
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [hasAnimated, setHasAnimated] = useState(false);
 
-  const tournaments = data?.pages.flatMap((page) => page.tournaments) ?? [];
+  // Get all tournaments
+  const allTournaments = data?.pages.flatMap((page) => page.tournaments) ?? [];
+
+  // Filter tournaments based on tracked status
+  const tournaments = useMemo(() => {
+    if (trackedFilter === 'all' || !isAuthenticated) {
+      return allTournaments;
+    }
+
+    const wishlistPKs = new Set(
+      wishlistData?.wishlist.map((item) => item.tournamentPK) ?? []
+    );
+
+    if (trackedFilter === 'tracked') {
+      return allTournaments.filter((tournament) =>
+        wishlistPKs.has(getTournamentPK(tournament))
+      );
+    }
+
+    // not-tracked
+    return allTournaments.filter(
+      (tournament) => !wishlistPKs.has(getTournamentPK(tournament))
+    );
+  }, [allTournaments, trackedFilter, wishlistData, isAuthenticated]);
 
   // Set hasAnimated flag on initial load
   useEffect(() => {
@@ -102,10 +134,15 @@ export function TournamentList() {
 
   return (
     <div className="space-y-6">
-      {/* Tournament count with distance hint */}
-      <div className="text-sm text-muted-foreground">
-        Showing {tournaments.length} tournament{tournaments.length !== 1 ? 's' : ''}
-        {filters.radiusMiles && ` within ${filters.radiusMiles} miles`}
+      {/* Tournament count and filter */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="text-sm text-muted-foreground">
+          Showing {tournaments.length} tournament{tournaments.length !== 1 ? 's' : ''}
+          {filters.radiusMiles && ` within ${filters.radiusMiles} miles`}
+        </div>
+        {isAuthenticated && (
+          <TrackedFilter value={trackedFilter} onChange={setTrackedFilter} />
+        )}
       </div>
 
       {/* Responsive grid: 1 col on mobile, 2 on tablet, 3 on desktop */}
@@ -116,7 +153,7 @@ export function TournamentList() {
             className={hasAnimated ? '' : 'animate-fade-in-up opacity-0'}
             style={!hasAnimated ? { animationDelay: `${index * 100}ms`, animationFillMode: 'forwards' } : {}}
           >
-            <TournamentCard tournament={tournament} />
+            <ScoreboardTournamentCard tournament={tournament} index={index} />
           </div>
         ))}
       </div>

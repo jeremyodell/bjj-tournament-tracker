@@ -88,6 +88,16 @@ export function AppHeader() {
           {isAuthenticated && (
             <>
               <Link
+                href="/wishlist"
+                className={`px-3 sm:px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 min-h-[44px] flex items-center ${
+                  isActive('/wishlist')
+                    ? 'bg-[#d4af37]/20 text-[#d4af37]'
+                    : 'text-white/70 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                Wishlist
+              </Link>
+              <Link
                 href="/plan"
                 className={`px-3 sm:px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 min-h-[44px] flex items-center ${
                   isActive('/plan')
