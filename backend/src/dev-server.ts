@@ -21,6 +21,8 @@ const { handler: tournamentsHandler } = await import('./handlers/tournaments.js'
 const { handler: gymsHandler } = await import('./handlers/gyms.js');
 const { handler: adminMatchesHandler } = await import('./handlers/adminMatches.js');
 const { handler: masterGymsHandler } = await import('./handlers/masterGyms.js');
+const { handler: wishlistHandler } = await import('./handlers/wishlist.js');
+const { handler: athletesHandler } = await import('./handlers/athletes.js');
 const { syncIBJJFGyms } = await import('./services/gymSyncService.js');
 
 const app = express();
@@ -145,6 +147,19 @@ app.get('/api/tournaments/:id', (req, res, next) => {
 app.get('/api/gyms', wrapHandler(gymsHandler));
 app.get('/api/gyms/:org/:externalId', wrapHandler(gymsHandler));
 app.get('/api/gyms/:org/:externalId/roster/:tournamentId', wrapHandler(gymsHandler));
+
+// Wishlist routes
+app.get('/api/wishlist', wrapHandler(wishlistHandler));
+app.post('/api/wishlist', wrapHandler(wishlistHandler));
+app.put('/api/wishlist/:tournamentId', wrapHandler(wishlistHandler));
+app.delete('/api/wishlist/:tournamentId', wrapHandler(wishlistHandler));
+
+// Athletes routes
+app.get('/api/athletes', wrapHandler(athletesHandler));
+app.get('/api/athletes/:id', wrapHandler(athletesHandler));
+app.post('/api/athletes', wrapHandler(athletesHandler));
+app.put('/api/athletes/:id', wrapHandler(athletesHandler));
+app.delete('/api/athletes/:id', wrapHandler(athletesHandler));
 
 // Admin routes
 app.get('/api/admin/pending-matches', wrapHandler(adminMatchesHandler));

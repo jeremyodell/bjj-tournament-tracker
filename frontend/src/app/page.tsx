@@ -1,15 +1,13 @@
 // frontend/src/app/page.tsx
-import { LandingHero } from '@/components/landing/LandingHero';
-import { ValueProps } from '@/components/landing/ValueProps';
-import { BottomCTA } from '@/components/landing/BottomCTA';
+import { ScoreboardHero } from '@/components/home/ScoreboardHero';
+import { TournamentDiscovery } from '@/components/home/TournamentDiscovery';
 import { Footer } from '@/components/landing/Footer';
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-black -mt-16">
-      <LandingHero />
-      <ValueProps />
-      <BottomCTA />
+    <main className="min-h-screen -mt-16">
+      <ScoreboardHero />
+      <TournamentDiscovery />
       <Footer />
     </main>
   );
