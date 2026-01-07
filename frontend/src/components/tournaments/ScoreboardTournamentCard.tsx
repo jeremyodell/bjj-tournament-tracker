@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Calendar, Star } from 'lucide-react';
+import { Loader2, Calendar } from 'lucide-react';
 import type { Tournament } from '@/lib/types';
 import { useWishlist } from '@/hooks/useWishlist';
 import { useAddToWishlist } from '@/hooks/useAddToWishlist';
@@ -82,27 +82,6 @@ export function ScoreboardTournamentCard({ tournament, index }: ScoreboardTourna
         animationDelay: `${(index || 0) * 50}ms`,
       }}
     >
-      {/* Star Badge - Only show for tracked tournaments */}
-      {isTracked && (
-        <div className="absolute top-3 left-3 z-10">
-          <div
-            className="flex items-center justify-center w-7 h-7 rounded-full"
-            style={{
-              background: 'rgba(0, 0, 0, 0.6)',
-              border: '1px solid var(--scoreboard-yellow)',
-            }}
-          >
-            <Star
-              className="w-4 h-4 fill-current"
-              style={{
-                color: 'var(--scoreboard-yellow)',
-                filter: 'drop-shadow(0 0 8px var(--scoreboard-yellow-glow))',
-              }}
-            />
-          </div>
-        </div>
-      )}
-
       {/* LED Status Indicator */}
       <div className="absolute top-3 right-3 flex items-center gap-1.5">
         <div
