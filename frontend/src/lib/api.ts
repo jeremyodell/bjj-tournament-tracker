@@ -333,4 +333,70 @@ export async function rejectGymSubmission(
   return response.data;
 }
 
+// User Profile types and API functions
+export interface UserProfile {
+  email: string;
+  name: string | null;
+  homeCity: string | null;
+  homeState: string | null;
+  nearestAirport: string | null;
+  gymName: string | null;
+  masterGymId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserProfileUpdate {
+  name?: string;
+  homeCity?: string;
+  homeState?: string;
+  nearestAirport?: string;
+  gymName?: string;
+  masterGymId?: string;
+}
+
+export async function fetchUserProfile(accessToken: string): Promise<UserProfile> {
+  const response = await api.get<UserProfile>('/profile', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  return response.data;
+}
+
+export async function updateUserProfile(
+  accessToken: string,
+  updates: UserProfileUpdate
+): Promise<UserProfile> {
+  const response = await api.put<UserProfile>('/profile', updates, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  return response.data;
+}
+
+// User's Gym Roster at a Tournament (authenticated)
+export interface UserGymRosterAthlete {
+  name: string;
+  belt: string;
+  ageDiv: string;
+  weight: string;
+  gender: string;
+}
+
+export interface UserGymRoster {
+  gymName: string | null;
+  athletes: UserGymRosterAthlete[];
+  athleteCount: number;
+  fetchedAt: string | null;
+}
+
+export async function fetchUserGymRoster(
+  tournamentId: string,
+  accessToken: string
+): Promise<UserGymRoster> {
+  const response = await api.get<UserGymRoster>(
+    `/tournaments/${encodeURIComponent(tournamentId)}/roster`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  return response.data;
+}
+
 export default api;
