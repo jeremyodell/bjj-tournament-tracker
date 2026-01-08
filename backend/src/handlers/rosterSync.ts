@@ -1,6 +1,6 @@
 import type { Context, ScheduledEvent } from 'aws-lambda';
 import {
-  syncWishlistedRosters,
+  syncUserGymRosters,
   type RosterSyncBatchResult,
 } from '../services/rosterSyncService.js';
 
@@ -23,7 +23,7 @@ interface RosterSyncResponse {
  * Daily Roster Sync Lambda Handler
  *
  * Triggered by EventBridge at 3am UTC to pre-fetch rosters for upcoming tournaments.
- * Only syncs (tournament, gym) pairs where users have wishlisted tournaments.
+ * Syncs (tournament, gym) pairs for all gyms with active user profiles.
  *
  * Rate limited: 10 concurrent requests with 1s delay between batches.
  *
@@ -39,7 +39,7 @@ export async function handler(
   const source = 'source' in event ? event.source : 'manual';
   const daysAhead = 'daysAhead' in event && typeof event.daysAhead === 'number'
     ? event.daysAhead
-    : 60;
+    : 90;
 
   console.log('[RosterSync] Starting sync', {
     requestId,
@@ -48,7 +48,7 @@ export async function handler(
   });
 
   try {
-    const result = await syncWishlistedRosters(daysAhead);
+    const result = await syncUserGymRosters(daysAhead);
 
     console.log('[RosterSync] Sync complete', {
       requestId,

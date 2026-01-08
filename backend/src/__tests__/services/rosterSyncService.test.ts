@@ -1,15 +1,20 @@
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
-import { syncWishlistedRosters } from '../../services/rosterSyncService.js';
+import { syncWishlistedRosters, syncUserGymRosters } from '../../services/rosterSyncService.js';
 import * as wishlistQueries from '../../db/wishlistQueries.js';
 import * as athleteQueries from '../../db/athleteQueries.js';
 import * as gymSyncService from '../../services/gymSyncService.js';
-import type { AthleteItem, TournamentItem } from '../../db/types.js';
+import * as userProfileQueries from '../../db/userProfileQueries.js';
+import * as gymQueries from '../../db/gymQueries.js';
+import * as queries from '../../db/queries.js';
+import type { AthleteItem, TournamentItem, SourceGymItem } from '../../db/types.js';
 
 // Mock dependencies
 jest.mock('../../db/wishlistQueries.js');
 jest.mock('../../db/athleteQueries.js');
 jest.mock('../../services/gymSyncService.js');
 jest.mock('../../db/queries.js');
+jest.mock('../../db/userProfileQueries.js');
+jest.mock('../../db/gymQueries.js');
 
 const mockGetAllWishlistedTournamentPKs = wishlistQueries.getAllWishlistedTournamentPKs as jest.MockedFunction<
   typeof wishlistQueries.getAllWishlistedTournamentPKs
@@ -19,6 +24,15 @@ const mockGetAllAthletesWithGyms = athleteQueries.getAllAthletesWithGyms as jest
 >;
 const mockSyncGymRoster = gymSyncService.syncGymRoster as jest.MockedFunction<
   typeof gymSyncService.syncGymRoster
+>;
+const mockGetAllUserMasterGymIds = userProfileQueries.getAllUserMasterGymIds as jest.MockedFunction<
+  typeof userProfileQueries.getAllUserMasterGymIds
+>;
+const mockGetSourceGymsByMasterGymId = gymQueries.getSourceGymsByMasterGymId as jest.MockedFunction<
+  typeof gymQueries.getSourceGymsByMasterGymId
+>;
+const mockQueryTournaments = queries.queryTournaments as jest.MockedFunction<
+  typeof queries.queryTournaments
 >;
 
 describe('rosterSyncService', () => {
@@ -324,6 +338,287 @@ describe('rosterSyncService', () => {
       );
 
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('syncUserGymRosters', () => {
+    // Helper to create a mock tournament item
+    const createMockTournament = (org: 'JJWL' | 'IBJJF', externalId: string, startDate: string): TournamentItem => ({
+      PK: `TOURN#${org}#${externalId}`,
+      SK: 'META',
+      GSI1PK: 'TOURNAMENTS',
+      GSI1SK: `${startDate}#${org}#${externalId}`,
+      org,
+      externalId,
+      name: `Tournament ${externalId}`,
+      slug: null,
+      city: 'Austin',
+      venue: 'Convention Center',
+      country: 'USA',
+      startDate,
+      endDate: startDate,
+      gi: true,
+      nogi: false,
+      kids: true,
+      registrationUrl: null,
+      bannerUrl: null,
+      lat: null,
+      lng: null,
+      venueId: null,
+      geocodeConfidence: null,
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    });
+
+    // Helper to create a mock source gym item
+    const createMockSourceGym = (org: 'JJWL' | 'IBJJF', externalId: string, masterGymId: string): SourceGymItem => ({
+      PK: `SRCGYM#${org}#${externalId}`,
+      SK: 'META',
+      GSI1PK: 'GYMS',
+      GSI1SK: `${org}#Gym ${externalId}`,
+      org,
+      externalId,
+      name: `Gym ${externalId}`,
+      masterGymId,
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    });
+
+    it('should sync rosters for user gyms at upcoming tournaments', async () => {
+      // User has one master gym linked to their profile
+      mockGetAllUserMasterGymIds.mockResolvedValue(['master-gym-1']);
+
+      // The master gym is linked to a JJWL source gym
+      mockGetSourceGymsByMasterGymId.mockResolvedValue([
+        createMockSourceGym('JJWL', '5713', 'master-gym-1'),
+      ]);
+
+      // One upcoming JJWL tournament
+      mockQueryTournaments.mockResolvedValue({
+        items: [createMockTournament('JJWL', '850', '2026-02-15')],
+      });
+
+      mockSyncGymRoster.mockResolvedValue({
+        success: true,
+        athleteCount: 10,
+      });
+
+      const resultPromise = syncUserGymRosters(90);
+      await jest.runAllTimersAsync();
+      const result = await resultPromise;
+
+      expect(result.successCount).toBe(1);
+      expect(result.failureCount).toBe(0);
+      expect(mockSyncGymRoster).toHaveBeenCalledWith('JJWL', '850', '5713');
+    });
+
+    it('should return empty result when no user gyms exist', async () => {
+      mockGetAllUserMasterGymIds.mockResolvedValue([]);
+
+      const resultPromise = syncUserGymRosters(90);
+      await jest.runAllTimersAsync();
+      const result = await resultPromise;
+
+      expect(result.successCount).toBe(0);
+      expect(result.failureCount).toBe(0);
+      expect(result.pairs).toEqual([]);
+      expect(mockSyncGymRoster).not.toHaveBeenCalled();
+    });
+
+    it('should return empty result when no source gyms linked to master gyms', async () => {
+      mockGetAllUserMasterGymIds.mockResolvedValue(['master-gym-1']);
+      mockGetSourceGymsByMasterGymId.mockResolvedValue([]);
+
+      const resultPromise = syncUserGymRosters(90);
+      await jest.runAllTimersAsync();
+      const result = await resultPromise;
+
+      expect(result.successCount).toBe(0);
+      expect(result.failureCount).toBe(0);
+      expect(mockSyncGymRoster).not.toHaveBeenCalled();
+    });
+
+    it('should return empty result when no tournaments in window', async () => {
+      mockGetAllUserMasterGymIds.mockResolvedValue(['master-gym-1']);
+      mockGetSourceGymsByMasterGymId.mockResolvedValue([
+        createMockSourceGym('JJWL', '5713', 'master-gym-1'),
+      ]);
+      mockQueryTournaments.mockResolvedValue({ items: [] });
+
+      const resultPromise = syncUserGymRosters(90);
+      await jest.runAllTimersAsync();
+      const result = await resultPromise;
+
+      expect(result.successCount).toBe(0);
+      expect(result.failureCount).toBe(0);
+      expect(mockSyncGymRoster).not.toHaveBeenCalled();
+    });
+
+    it('should only sync JJWL gyms at JJWL tournaments', async () => {
+      mockGetAllUserMasterGymIds.mockResolvedValue(['master-gym-1']);
+
+      // Source gym is JJWL
+      mockGetSourceGymsByMasterGymId.mockResolvedValue([
+        createMockSourceGym('JJWL', '5713', 'master-gym-1'),
+      ]);
+
+      // Tournaments include both JJWL and IBJJF
+      mockQueryTournaments.mockResolvedValue({
+        items: [
+          createMockTournament('JJWL', '850', '2026-02-15'),
+          createMockTournament('IBJJF', '999', '2026-02-20'),
+        ],
+      });
+
+      mockSyncGymRoster.mockResolvedValue({
+        success: true,
+        athleteCount: 5,
+      });
+
+      const resultPromise = syncUserGymRosters(90);
+      await jest.runAllTimersAsync();
+      const result = await resultPromise;
+
+      // Should only sync the JJWL gym at the JJWL tournament (not the IBJJF one)
+      expect(mockSyncGymRoster).toHaveBeenCalledTimes(1);
+      expect(mockSyncGymRoster).toHaveBeenCalledWith('JJWL', '850', '5713');
+      expect(result.successCount).toBe(1);
+    });
+
+    it('should sync multiple gyms from same master gym at multiple tournaments', async () => {
+      mockGetAllUserMasterGymIds.mockResolvedValue(['master-gym-1']);
+
+      // Master gym linked to both JJWL and IBJJF source gyms
+      mockGetSourceGymsByMasterGymId.mockResolvedValue([
+        createMockSourceGym('JJWL', '5713', 'master-gym-1'),
+        createMockSourceGym('IBJJF', 'ibjjf-123', 'master-gym-1'),
+      ]);
+
+      // Multiple JJWL tournaments
+      mockQueryTournaments.mockResolvedValue({
+        items: [
+          createMockTournament('JJWL', '850', '2026-02-15'),
+          createMockTournament('JJWL', '860', '2026-03-10'),
+        ],
+      });
+
+      mockSyncGymRoster.mockResolvedValue({
+        success: true,
+        athleteCount: 5,
+      });
+
+      const resultPromise = syncUserGymRosters(90);
+      await jest.runAllTimersAsync();
+      const result = await resultPromise;
+
+      // 2 JJWL tournaments * 1 JJWL gym = 2 pairs (IBJJF gym doesn't match JJWL tournaments)
+      expect(mockSyncGymRoster).toHaveBeenCalledTimes(2);
+      expect(result.successCount).toBe(2);
+    });
+
+    it('should deduplicate source gyms from multiple master gyms', async () => {
+      // Two users have the same master gym
+      mockGetAllUserMasterGymIds.mockResolvedValue(['master-gym-1', 'master-gym-1']);
+
+      mockGetSourceGymsByMasterGymId.mockResolvedValue([
+        createMockSourceGym('JJWL', '5713', 'master-gym-1'),
+      ]);
+
+      mockQueryTournaments.mockResolvedValue({
+        items: [createMockTournament('JJWL', '850', '2026-02-15')],
+      });
+
+      mockSyncGymRoster.mockResolvedValue({
+        success: true,
+        athleteCount: 5,
+      });
+
+      const resultPromise = syncUserGymRosters(90);
+      await jest.runAllTimersAsync();
+      const result = await resultPromise;
+
+      // Should only sync once (deduplicated)
+      expect(mockSyncGymRoster).toHaveBeenCalledTimes(1);
+      expect(result.successCount).toBe(1);
+    });
+
+    it('should count failures when syncGymRoster returns error', async () => {
+      mockGetAllUserMasterGymIds.mockResolvedValue(['master-gym-1']);
+      mockGetSourceGymsByMasterGymId.mockResolvedValue([
+        createMockSourceGym('JJWL', '5713', 'master-gym-1'),
+      ]);
+      mockQueryTournaments.mockResolvedValue({
+        items: [createMockTournament('JJWL', '850', '2026-02-15')],
+      });
+
+      mockSyncGymRoster.mockResolvedValue({
+        success: false,
+        athleteCount: 0,
+        error: 'API timeout',
+      });
+
+      const resultPromise = syncUserGymRosters(90);
+      await jest.runAllTimersAsync();
+      const result = await resultPromise;
+
+      expect(result.successCount).toBe(0);
+      expect(result.failureCount).toBe(1);
+    });
+
+    it('should use default 90-day window', async () => {
+      mockGetAllUserMasterGymIds.mockResolvedValue(['master-gym-1']);
+      mockGetSourceGymsByMasterGymId.mockResolvedValue([
+        createMockSourceGym('JJWL', '5713', 'master-gym-1'),
+      ]);
+      mockQueryTournaments.mockResolvedValue({ items: [] });
+
+      const resultPromise = syncUserGymRosters();
+      await jest.runAllTimersAsync();
+      await resultPromise;
+
+      // Check that queryTournaments was called with a date window
+      expect(mockQueryTournaments).toHaveBeenCalledWith(
+        expect.objectContaining({
+          startAfter: expect.any(String),
+          startBefore: expect.any(String),
+        }),
+        250, // Limit
+        undefined // Initial lastKey
+      );
+    });
+
+    it('should respect rate limiting with batches', async () => {
+      mockGetAllUserMasterGymIds.mockResolvedValue(['master-gym-1']);
+
+      // 5 source gyms
+      mockGetSourceGymsByMasterGymId.mockResolvedValue([
+        createMockSourceGym('JJWL', '1', 'master-gym-1'),
+        createMockSourceGym('JJWL', '2', 'master-gym-1'),
+        createMockSourceGym('JJWL', '3', 'master-gym-1'),
+        createMockSourceGym('JJWL', '4', 'master-gym-1'),
+        createMockSourceGym('JJWL', '5', 'master-gym-1'),
+      ]);
+
+      // 3 tournaments = 15 pairs (requires 2 batches with concurrency 10)
+      mockQueryTournaments.mockResolvedValue({
+        items: [
+          createMockTournament('JJWL', '850', '2026-02-15'),
+          createMockTournament('JJWL', '860', '2026-02-20'),
+          createMockTournament('JJWL', '870', '2026-02-25'),
+        ],
+      });
+
+      mockSyncGymRoster.mockResolvedValue({
+        success: true,
+        athleteCount: 5,
+      });
+
+      const resultPromise = syncUserGymRosters(90);
+      await jest.runAllTimersAsync();
+      const result = await resultPromise;
+
+      expect(mockSyncGymRoster).toHaveBeenCalledTimes(15);
+      expect(result.successCount).toBe(15);
     });
   });
 });

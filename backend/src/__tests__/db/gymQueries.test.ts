@@ -11,6 +11,7 @@ import {
   batchUpsertGyms,
   getGymSyncMeta,
   updateGymSyncMeta,
+  getSourceGymsByMasterGymId,
 } from '../../db/gymQueries.js';
 import { PutCommand } from '@aws-sdk/lib-dynamodb';
 import { docClient } from '../../db/client.js';
@@ -621,6 +622,101 @@ describe('gymQueries', () => {
         lastSyncAt: '2026-01-04T12:00:00.000Z',
         lastChangeAt: '2025-12-15T00:00:00.000Z',
       });
+    });
+  });
+
+  describe('getSourceGymsByMasterGymId', () => {
+    it('should return source gyms linked to a master gym', async () => {
+      const linkedGyms: SourceGymItem[] = [
+        {
+          PK: 'SRCGYM#JJWL#5713',
+          SK: 'META',
+          GSI1PK: 'GYMS',
+          GSI1SK: 'JJWL#Pablo Silva BJJ',
+          org: 'JJWL',
+          externalId: '5713',
+          name: 'Pablo Silva BJJ',
+          masterGymId: 'master-gym-uuid-123',
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+        {
+          PK: 'SRCGYM#IBJJF#ibjjf-456',
+          SK: 'META',
+          GSI1PK: 'GYMS',
+          GSI1SK: 'IBJJF#Pablo Silva Brazilian Jiu-Jitsu',
+          org: 'IBJJF',
+          externalId: 'ibjjf-456',
+          name: 'Pablo Silva Brazilian Jiu-Jitsu',
+          masterGymId: 'master-gym-uuid-123',
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+      ];
+
+      // Scan returns linked gyms
+      mockSend.mockResolvedValueOnce({ Items: linkedGyms } as never);
+
+      const results = await getSourceGymsByMasterGymId('master-gym-uuid-123');
+
+      expect(results).toHaveLength(2);
+      expect(results.every((g: SourceGymItem) => g.masterGymId === 'master-gym-uuid-123')).toBe(true);
+    });
+
+    it('should return empty array when no source gyms are linked', async () => {
+      mockSend.mockResolvedValueOnce({ Items: [] } as never);
+
+      const results = await getSourceGymsByMasterGymId('nonexistent-master-gym');
+
+      expect(results).toHaveLength(0);
+    });
+
+    it('should use scan with filter on masterGymId', async () => {
+      mockSend.mockResolvedValueOnce({ Items: [] } as never);
+
+      await getSourceGymsByMasterGymId('master-gym-uuid-456');
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const input = mockSend.mock.calls[0][0].input as any;
+      expect(input.FilterExpression).toContain('masterGymId = :masterGymId');
+      expect(input.ExpressionAttributeValues[':masterGymId']).toBe('master-gym-uuid-456');
+    });
+
+    it('should handle pagination for large result sets', async () => {
+      const firstPage: SourceGymItem[] = [{
+        PK: 'SRCGYM#JJWL#1',
+        SK: 'META',
+        GSI1PK: 'GYMS',
+        GSI1SK: 'JJWL#Gym 1',
+        org: 'JJWL',
+        externalId: '1',
+        name: 'Gym 1',
+        masterGymId: 'master-123',
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      }];
+
+      const secondPage: SourceGymItem[] = [{
+        PK: 'SRCGYM#IBJJF#2',
+        SK: 'META',
+        GSI1PK: 'GYMS',
+        GSI1SK: 'IBJJF#Gym 2',
+        org: 'IBJJF',
+        externalId: '2',
+        name: 'Gym 2',
+        masterGymId: 'master-123',
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      }];
+
+      mockSend
+        .mockResolvedValueOnce({ Items: firstPage, LastEvaluatedKey: { PK: 'SRCGYM#JJWL#1', SK: 'META' } } as never)
+        .mockResolvedValueOnce({ Items: secondPage } as never);
+
+      const results = await getSourceGymsByMasterGymId('master-123');
+
+      expect(results).toHaveLength(2);
+      expect(mockSend).toHaveBeenCalledTimes(2);
     });
   });
 

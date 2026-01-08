@@ -1,4 +1,4 @@
-import { QueryCommand, PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { QueryCommand, PutCommand, GetCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { docClient, TABLE_NAME, GSI1_NAME } from './client.js';
 import {
   buildSourceGymPK,
@@ -267,4 +267,41 @@ export async function updateGymSyncMeta(
       Item: item,
     })
   );
+}
+
+/**
+ * Get all source gyms linked to a master gym by masterGymId.
+ * Uses a scan with filter since there's no GSI on masterGymId.
+ */
+export async function getSourceGymsByMasterGymId(
+  masterGymId: string
+): Promise<SourceGymItem[]> {
+  const sourceGyms: SourceGymItem[] = [];
+  let lastEvaluatedKey: Record<string, unknown> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new ScanCommand({
+        TableName: TABLE_NAME,
+        FilterExpression: 'SK = :sk AND masterGymId = :masterGymId',
+        ExpressionAttributeValues: {
+          ':sk': 'META',
+          ':masterGymId': masterGymId,
+        },
+        ExclusiveStartKey: lastEvaluatedKey,
+      })
+    );
+
+    for (const item of result.Items || []) {
+      // Only include source gym items (PK starts with SRCGYM#)
+      const pk = (item as { PK?: string }).PK;
+      if (pk?.startsWith('SRCGYM#')) {
+        sourceGyms.push(item as SourceGymItem);
+      }
+    }
+
+    lastEvaluatedKey = result.LastEvaluatedKey;
+  } while (lastEvaluatedKey);
+
+  return sourceGyms;
 }

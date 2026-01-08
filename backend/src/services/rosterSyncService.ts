@@ -1,6 +1,10 @@
 import { getAllWishlistedTournamentPKs } from '../db/wishlistQueries.js';
 import { getAllAthletesWithGyms } from '../db/athleteQueries.js';
 import { syncGymRoster, type RosterSyncResult } from './gymSyncService.js';
+import { getAllUserMasterGymIds } from '../db/userProfileQueries.js';
+import { getSourceGymsByMasterGymId } from '../db/gymQueries.js';
+import { queryTournaments } from '../db/queries.js';
+import type { SourceGymItem } from '../db/types.js';
 
 /**
  * Result of a roster sync batch operation
@@ -175,6 +179,171 @@ export async function syncWishlistedRosters(daysAhead: number = 60): Promise<Ros
 
   console.log(
     `[RosterSyncService] Sync complete: ${successCount} success, ${failureCount} failures out of ${pairs.length} pairs`
+  );
+
+  return { successCount, failureCount, pairs: results };
+}
+
+/**
+ * Sync rosters for user gym affiliations.
+ *
+ * This function:
+ * 1. Gets all master gym IDs from user profiles
+ * 2. Gets source gyms linked to each master gym
+ * 3. Queries tournaments within the date range (default 90 days)
+ * 4. Creates (tournament, gym) pairs for syncing (matching org)
+ * 5. Rate-limits syncing to avoid overwhelming the API
+ *
+ * @param daysAhead - Number of days to look ahead for tournaments (default 90)
+ * @returns Summary of sync results
+ */
+export async function syncUserGymRosters(daysAhead: number = 90): Promise<RosterSyncBatchResult> {
+  console.log(`[RosterSyncService] Starting user gym roster sync for tournaments within ${daysAhead} days`);
+
+  // Step 1: Get all unique master gym IDs from user profiles
+  const masterGymIds = await getAllUserMasterGymIds();
+
+  if (masterGymIds.length === 0) {
+    console.log('[RosterSyncService] No user gyms found');
+    return { successCount: 0, failureCount: 0, pairs: [] };
+  }
+
+  // Deduplicate master gym IDs (users may share the same gym)
+  const uniqueMasterGymIds = [...new Set(masterGymIds)];
+  console.log(`[RosterSyncService] Found ${uniqueMasterGymIds.length} unique user gyms`);
+
+  // Step 2: Get source gyms linked to each master gym
+  const sourceGymsMap = new Map<string, SourceGymItem[]>();
+  for (const masterGymId of uniqueMasterGymIds) {
+    const sourceGyms = await getSourceGymsByMasterGymId(masterGymId);
+    if (sourceGyms.length > 0) {
+      sourceGymsMap.set(masterGymId, sourceGyms);
+    }
+  }
+
+  // Flatten and deduplicate source gyms
+  const allSourceGyms: SourceGymItem[] = [];
+  const seenSourceGymPKs = new Set<string>();
+  for (const sourceGyms of sourceGymsMap.values()) {
+    for (const gym of sourceGyms) {
+      if (!seenSourceGymPKs.has(gym.PK)) {
+        seenSourceGymPKs.add(gym.PK);
+        allSourceGyms.push(gym);
+      }
+    }
+  }
+
+  if (allSourceGyms.length === 0) {
+    console.log('[RosterSyncService] No source gyms linked to user master gyms');
+    return { successCount: 0, failureCount: 0, pairs: [] };
+  }
+
+  console.log(`[RosterSyncService] Found ${allSourceGyms.length} unique source gyms`);
+
+  // Step 3: Query tournaments within the date range
+  const today = new Date();
+  const futureDate = new Date(today);
+  futureDate.setDate(futureDate.getDate() + daysAhead);
+
+  const startAfter = today.toISOString().split('T')[0];
+  const startBefore = futureDate.toISOString().split('T')[0];
+
+  // Fetch all tournaments in window (paginate if needed)
+  const allTournaments = [];
+  let lastKey: Record<string, unknown> | undefined;
+  do {
+    const result = await queryTournaments(
+      { startAfter, startBefore },
+      250,
+      lastKey
+    );
+    allTournaments.push(...result.items);
+    lastKey = result.lastKey;
+  } while (lastKey);
+
+  if (allTournaments.length === 0) {
+    console.log('[RosterSyncService] No tournaments found within date range');
+    return { successCount: 0, failureCount: 0, pairs: [] };
+  }
+
+  console.log(`[RosterSyncService] Found ${allTournaments.length} tournaments within ${daysAhead} days`);
+
+  // Step 4: Create (tournament, gym) pairs - only match org (JJWL gyms at JJWL tournaments, etc.)
+  const pairs: Array<{ tournamentId: string; gymExternalId: string; org: 'JJWL' | 'IBJJF' }> = [];
+
+  for (const tournament of allTournaments) {
+    // Only JJWL supported for now
+    if (tournament.org !== 'JJWL') continue;
+
+    for (const sourceGym of allSourceGyms) {
+      // Only sync gyms that match the tournament org
+      if (sourceGym.org !== tournament.org) continue;
+
+      pairs.push({
+        tournamentId: tournament.externalId,
+        gymExternalId: sourceGym.externalId,
+        org: sourceGym.org,
+      });
+    }
+  }
+
+  console.log(`[RosterSyncService] Created ${pairs.length} (tournament, gym) pairs to sync`);
+
+  if (pairs.length === 0) {
+    return { successCount: 0, failureCount: 0, pairs: [] };
+  }
+
+  // Step 5: Rate-limited sync (reuse existing batch logic)
+  const results: RosterSyncBatchResult['pairs'] = [];
+  let successCount = 0;
+  let failureCount = 0;
+
+  // Process in batches of CONCURRENCY_LIMIT
+  for (let i = 0; i < pairs.length; i += CONCURRENCY_LIMIT) {
+    const batch = pairs.slice(i, i + CONCURRENCY_LIMIT);
+
+    // Process batch concurrently
+    const batchResults = await Promise.all(
+      batch.map(async (pair) => {
+        try {
+          const result = await syncGymRoster(pair.org, pair.tournamentId, pair.gymExternalId);
+          return {
+            tournamentId: pair.tournamentId,
+            gymExternalId: pair.gymExternalId,
+            success: result.success,
+            athleteCount: result.athleteCount,
+            error: result.error,
+          };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unknown error';
+          return {
+            tournamentId: pair.tournamentId,
+            gymExternalId: pair.gymExternalId,
+            success: false,
+            error: message,
+          };
+        }
+      })
+    );
+
+    // Aggregate results
+    for (const result of batchResults) {
+      results.push(result);
+      if (result.success) {
+        successCount++;
+      } else {
+        failureCount++;
+      }
+    }
+
+    // Delay before next batch (unless this is the last batch)
+    if (i + CONCURRENCY_LIMIT < pairs.length) {
+      await delay(BATCH_DELAY_MS);
+    }
+  }
+
+  console.log(
+    `[RosterSyncService] User gym sync complete: ${successCount} success, ${failureCount} failures out of ${pairs.length} pairs`
   );
 
   return { successCount, failureCount, pairs: results };
