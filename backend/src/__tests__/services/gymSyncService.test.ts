@@ -52,23 +52,21 @@ describe('gymSyncService', () => {
       const fetchMock = jest.spyOn(jjwlGymFetcher, 'fetchJJWLGyms');
       const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
       const listUSIBJJFGymsSpy = jest.spyOn(gymQueries as any, 'listUSIBJJFGyms');
-      const getSourceGymMock = jest.spyOn(gymQueries, 'getSourceGym');
+      const listAllJJWLGymsSpy = jest.spyOn(gymQueries as any, 'listAllJJWLGyms');
       const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
 
       fetchMock.mockResolvedValue(mockGyms);
       batchUpsertMock.mockResolvedValue(2);
       listUSIBJJFGymsSpy.mockResolvedValue([]);
       // Return unlinked gyms (masterGymId = null)
-      getSourceGymMock.mockImplementation(async (_org, externalId) => {
-        const gym = mockGyms.find(g => g.externalId === externalId);
-        return gym ? createMockSourceGym(gym) : null;
-      });
+      listAllJJWLGymsSpy.mockResolvedValue(mockGyms.map(g => createMockSourceGym(g)));
       processMatchesMock.mockResolvedValue({ autoLinked: 0, pendingCreated: 1 });
 
       const result = await syncJJWLGyms();
 
       expect(fetchMock).toHaveBeenCalled();
       expect(batchUpsertMock).toHaveBeenCalledWith(mockGyms);
+      expect(listAllJJWLGymsSpy).toHaveBeenCalledTimes(1); // Caching optimization
       expect(processMatchesMock).toHaveBeenCalledTimes(2);
       expect(result.fetched).toBe(2);
       expect(result.saved).toBe(2);
@@ -88,14 +86,14 @@ describe('gymSyncService', () => {
       const fetchMock = jest.spyOn(jjwlGymFetcher, 'fetchJJWLGyms');
       const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
       const listUSIBJJFGymsSpy = jest.spyOn(gymQueries as any, 'listUSIBJJFGyms');
-      const getSourceGymMock = jest.spyOn(gymQueries, 'getSourceGym');
+      const listAllJJWLGymsSpy = jest.spyOn(gymQueries as any, 'listAllJJWLGyms');
       const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
 
       fetchMock.mockResolvedValue(mockGyms);
       batchUpsertMock.mockResolvedValue(1);
       listUSIBJJFGymsSpy.mockResolvedValue([]);
       // Return linked gym (masterGymId is set)
-      getSourceGymMock.mockResolvedValue(createMockSourceGym(mockGyms[0], 'master-123'));
+      listAllJJWLGymsSpy.mockResolvedValue([createMockSourceGym(mockGyms[0], 'master-123')]);
 
       const result = await syncJJWLGyms();
 
@@ -140,15 +138,22 @@ describe('gymSyncService', () => {
       const fetchMock = jest.spyOn(jjwlGymFetcher, 'fetchJJWLGyms');
       const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
       const listUSIBJJFGymsSpy = jest.spyOn(gymQueries as any, 'listUSIBJJFGyms');
+      const listAllJJWLGymsSpy = jest.spyOn(gymQueries as any, 'listAllJJWLGyms');
 
       fetchMock.mockResolvedValue([]);
       batchUpsertMock.mockResolvedValue(0);
       listUSIBJJFGymsSpy.mockResolvedValue([]);
+      listAllJJWLGymsSpy.mockResolvedValue([]);
 
       const result = await syncJJWLGyms();
 
       expect(result.fetched).toBe(0);
       expect(result.saved).toBe(0);
+      expect(result.matching).toEqual({
+        processed: 0,
+        autoLinked: 0,
+        pendingCreated: 0,
+      });
       expect(result.error).toBeUndefined();
     });
   });
@@ -196,25 +201,22 @@ describe('gymSyncService', () => {
 
       const fetchMock = jest.spyOn(jjwlGymFetcher, 'fetchJJWLGyms');
       const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
-      // Mock the function that will be added for caching
       const listUSIBJJFGymsSpy = jest.spyOn(gymQueries as any, 'listUSIBJJFGyms');
-      const getSourceGymMock = jest.spyOn(gymQueries, 'getSourceGym');
+      const listAllJJWLGymsSpy = jest.spyOn(gymQueries as any, 'listAllJJWLGyms');
       const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
 
       fetchMock.mockResolvedValue(mockJJWLGyms);
       batchUpsertMock.mockResolvedValue(2);
       listUSIBJJFGymsSpy.mockResolvedValue(mockUSIBJJFGyms);
-      getSourceGymMock.mockImplementation(async (_org, externalId) => {
-        const gym = mockJJWLGyms.find(g => g.externalId === externalId);
-        return gym ? createMockSourceGym(gym) : null;
-      });
+      listAllJJWLGymsSpy.mockResolvedValue(mockJJWLGyms.map(g => createMockSourceGym(g)));
       processMatchesMock.mockResolvedValue({ autoLinked: 0, pendingCreated: 1 });
 
       await syncJJWLGyms();
 
       // KEY ASSERTION: listUSIBJJFGyms called ONCE, not once per JJWL gym
-      // This test will fail until caching is implemented
+      // KEY ASSERTION: listAllJJWLGyms called ONCE, not once per gym for lookup
       expect(listUSIBJJFGymsSpy).toHaveBeenCalledTimes(1);
+      expect(listAllJJWLGymsSpy).toHaveBeenCalledTimes(1);
       expect(processMatchesMock).toHaveBeenCalledTimes(2); // Called for each JJWL gym
     });
 
@@ -226,13 +228,13 @@ describe('gymSyncService', () => {
       const fetchMock = jest.spyOn(jjwlGymFetcher, 'fetchJJWLGyms');
       const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
       const listUSIBJJFGymsSpy = jest.spyOn(gymQueries as any, 'listUSIBJJFGyms');
-      const getSourceGymMock = jest.spyOn(gymQueries, 'getSourceGym');
+      const listAllJJWLGymsSpy = jest.spyOn(gymQueries as any, 'listAllJJWLGyms');
       const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
 
       fetchMock.mockResolvedValue(mockJJWLGyms);
       batchUpsertMock.mockResolvedValue(1);
       listUSIBJJFGymsSpy.mockResolvedValue([]);
-      getSourceGymMock.mockResolvedValue(createMockSourceGym(mockJJWLGyms[0]));
+      listAllJJWLGymsSpy.mockResolvedValue([createMockSourceGym(mockJJWLGyms[0])]);
       // Mock high-confidence match that creates master gym
       processMatchesMock.mockResolvedValue({ autoLinked: 1, pendingCreated: 0 });
 
@@ -254,17 +256,14 @@ describe('gymSyncService', () => {
 
       const fetchMock = jest.spyOn(jjwlGymFetcher, 'fetchJJWLGyms');
       const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
+      const listAllJJWLGymsSpy = jest.spyOn(gymQueries as any, 'listAllJJWLGyms');
       const listUSIBJJFGymsSpy = jest.spyOn(gymQueries as any, 'listUSIBJJFGyms');
-      const getSourceGymMock = jest.spyOn(gymQueries, 'getSourceGym');
       const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
 
       fetchMock.mockResolvedValue(mockJJWLGyms);
       batchUpsertMock.mockResolvedValue(2);
+      listAllJJWLGymsSpy.mockResolvedValue(mockJJWLGyms.map(g => createMockSourceGym(g)));
       listUSIBJJFGymsSpy.mockResolvedValue([]);
-      getSourceGymMock.mockImplementation(async (_org, externalId) => {
-        const gym = mockJJWLGyms.find(g => g.externalId === externalId);
-        return gym ? createMockSourceGym(gym) : null;
-      });
       // Mock medium-confidence matches that create pending matches
       processMatchesMock.mockResolvedValue({ autoLinked: 0, pendingCreated: 1 });
 
@@ -286,19 +285,18 @@ describe('gymSyncService', () => {
 
       const fetchMock = jest.spyOn(jjwlGymFetcher, 'fetchJJWLGyms');
       const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
+      const listAllJJWLGymsSpy = jest.spyOn(gymQueries as any, 'listAllJJWLGyms');
       const listUSIBJJFGymsSpy = jest.spyOn(gymQueries as any, 'listUSIBJJFGyms');
-      const getSourceGymMock = jest.spyOn(gymQueries, 'getSourceGym');
       const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
 
       fetchMock.mockResolvedValue(mockJJWLGyms);
       batchUpsertMock.mockResolvedValue(2);
+      // First gym is linked, second is not
+      listAllJJWLGymsSpy.mockResolvedValue([
+        createMockSourceGym(mockJJWLGyms[0], 'master-123'),
+        createMockSourceGym(mockJJWLGyms[1], null),
+      ]);
       listUSIBJJFGymsSpy.mockResolvedValue([]);
-      getSourceGymMock.mockImplementation(async (_org, externalId) => {
-        // First gym is linked, second is not
-        const gym = mockJJWLGyms.find(g => g.externalId === externalId);
-        if (!gym) return null;
-        return createMockSourceGym(gym, externalId === 'jjwl-1' ? 'master-123' : null);
-      });
       processMatchesMock.mockResolvedValue({ autoLinked: 0, pendingCreated: 1 });
 
       const result = await syncJJWLGyms();
@@ -319,14 +317,14 @@ describe('gymSyncService', () => {
 
       const fetchMock = jest.spyOn(jjwlGymFetcher, 'fetchJJWLGyms');
       const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
+      const listAllJJWLGymsSpy = jest.spyOn(gymQueries as any, 'listAllJJWLGyms');
       const listUSIBJJFGymsSpy = jest.spyOn(gymQueries as any, 'listUSIBJJFGyms');
-      const getSourceGymMock = jest.spyOn(gymQueries, 'getSourceGym');
       const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
 
       fetchMock.mockResolvedValue(mockJJWLGyms);
       batchUpsertMock.mockResolvedValue(1);
+      listAllJJWLGymsSpy.mockResolvedValue(mockJJWLGyms.map(g => createMockSourceGym(g)));
       listUSIBJJFGymsSpy.mockResolvedValue([]);
-      getSourceGymMock.mockResolvedValue(createMockSourceGym(mockJJWLGyms[0]));
       processMatchesMock.mockResolvedValue({ autoLinked: 0, pendingCreated: 0 });
 
       const result = await syncJJWLGyms();
@@ -347,17 +345,14 @@ describe('gymSyncService', () => {
 
       const fetchMock = jest.spyOn(jjwlGymFetcher, 'fetchJJWLGyms');
       const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
+      const listAllJJWLGymsSpy = jest.spyOn(gymQueries as any, 'listAllJJWLGyms');
       const listUSIBJJFGymsSpy = jest.spyOn(gymQueries as any, 'listUSIBJJFGyms');
-      const getSourceGymMock = jest.spyOn(gymQueries, 'getSourceGym');
       const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
 
       fetchMock.mockResolvedValue(mockJJWLGyms);
       batchUpsertMock.mockResolvedValue(3);
+      listAllJJWLGymsSpy.mockResolvedValue(mockJJWLGyms.map(g => createMockSourceGym(g)));
       listUSIBJJFGymsSpy.mockResolvedValue([]);
-      getSourceGymMock.mockImplementation(async (_org, externalId) => {
-        const gym = mockJJWLGyms.find(g => g.externalId === externalId);
-        return gym ? createMockSourceGym(gym) : null;
-      });
       // Mix of results: 1 auto-linked, 1 pending
       processMatchesMock.mockResolvedValueOnce({ autoLinked: 1, pendingCreated: 0 })
         .mockResolvedValueOnce({ autoLinked: 0, pendingCreated: 1 })
