@@ -10,8 +10,9 @@ import {
   DescribeTableCommand,
   ResourceNotFoundException,
 } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, BatchWriteCommand } from '@aws-sdk/lib-dynamodb';
-import type { NormalizedTournament } from '../../fetchers/types.js';
+import { DynamoDBDocumentClient, BatchWriteCommand, ScanCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
+import type { NormalizedTournament, NormalizedGym } from '../../fetchers/types.js';
+import { buildSourceGymPK } from '../../db/types.js';
 
 // Test table configuration
 const TEST_TABLE_NAME = 'bjj-tournament-tracker-test';
@@ -251,3 +252,97 @@ export const TEST_TOURNAMENTS: NormalizedTournament[] = [
     bannerUrl: null,
   },
 ];
+
+/**
+ * Delete all gym records from the test table
+ */
+export async function deleteAllGyms(): Promise<void> {
+  // Scan for all gym-related items (SRCGYM#, GYMSYNC#)
+  const scanResult = await testDocClient.send(
+    new ScanCommand({
+      TableName: TEST_TABLE_NAME,
+      FilterExpression: 'begins_with(PK, :srcgym) OR begins_with(PK, :gymsync)',
+      ExpressionAttributeValues: {
+        ':srcgym': 'SRCGYM#',
+        ':gymsync': 'GYMSYNC#',
+      },
+    })
+  );
+
+  if (!scanResult.Items || scanResult.Items.length === 0) {
+    return;
+  }
+
+  // Delete items in batches of 25 (BatchWrite limit)
+  const batches: Array<{ PK: string; SK: string }>[] = [];
+  for (let i = 0; i < scanResult.Items.length; i += 25) {
+    batches.push(
+      scanResult.Items.slice(i, i + 25).map((item) => ({
+        PK: item.PK as string,
+        SK: item.SK as string,
+      }))
+    );
+  }
+
+  for (const batch of batches) {
+    await testDocClient.send(
+      new BatchWriteCommand({
+        RequestItems: {
+          [TEST_TABLE_NAME]: batch.map((key) => ({
+            DeleteRequest: { Key: key },
+          })),
+        },
+      })
+    );
+  }
+}
+
+/**
+ * Put a single source gym into the test table
+ */
+export async function putSourceGym(
+  gym: NormalizedGym & {
+    country?: string;
+    countryCode?: string;
+    city?: string;
+    state?: string;
+    address?: string;
+    federation?: string;
+    website?: string;
+  }
+): Promise<void> {
+  const now = new Date().toISOString();
+
+  await testDocClient.send(
+    new BatchWriteCommand({
+      RequestItems: {
+        [TEST_TABLE_NAME]: [
+          {
+            PutRequest: {
+              Item: {
+                PK: buildSourceGymPK(gym.org, gym.externalId),
+                SK: 'META',
+                GSI1PK: 'GYMS',
+                GSI1SK: `${gym.org}#${gym.name}`,
+                org: gym.org,
+                externalId: gym.externalId,
+                name: gym.name,
+                masterGymId: null,
+                createdAt: now,
+                updatedAt: now,
+                // Optional IBJJF fields
+                ...(gym.country && { country: gym.country }),
+                ...(gym.countryCode && { countryCode: gym.countryCode }),
+                ...(gym.city && { city: gym.city }),
+                ...(gym.state && { state: gym.state }),
+                ...(gym.address && { address: gym.address }),
+                ...(gym.federation && { federation: gym.federation }),
+                ...(gym.website && { website: gym.website }),
+              },
+            },
+          },
+        ],
+      },
+    })
+  );
+}
