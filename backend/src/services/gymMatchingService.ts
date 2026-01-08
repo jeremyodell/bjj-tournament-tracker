@@ -2,6 +2,7 @@ import type { SourceGymItem, MatchSignals } from '../db/types.js';
 import { createMasterGym, linkSourceGymToMaster } from '../db/masterGymQueries.js';
 import { createPendingMatch, findExistingPendingMatch } from '../db/pendingMatchQueries.js';
 import { listGyms } from '../db/gymQueries.js';
+import natural from 'natural';
 
 // Known BJJ affiliations for affiliation boost
 const KNOWN_AFFILIATIONS = [
@@ -63,6 +64,44 @@ export function normalizeGymName(name: string): string {
   normalized = normalized.replace(/\s+/g, ' ').trim();
 
   return normalized;
+}
+
+/**
+ * Calculate similarity score between two gym names using Jaro-Winkler distance.
+ * Returns 0-100 score with boosts for city/affiliation matches.
+ */
+export function calculateSimilarity(
+  name1: string,
+  name2: string,
+  city1?: string,
+  city2?: string
+): number {
+  // Normalize names for comparison
+  const n1 = name1.toLowerCase().trim();
+  const n2 = name2.toLowerCase().trim();
+
+  // Jaro-Winkler returns 0.0-1.0, multiply by 100 for existing thresholds
+  let score = natural.JaroWinklerDistance(n1, n2) * 100;
+
+  // City boost: +15 if city appears in gym name
+  if (city1 && city2) {
+    const c1 = city1.toLowerCase();
+    const c2 = city2.toLowerCase();
+    if (n1.includes(c2) || n2.includes(c1)) {
+      score += 15;
+    }
+  }
+
+  // Affiliation boost: +10 for matching BJJ affiliations
+  for (const affiliation of KNOWN_AFFILIATIONS) {
+    if (n1.includes(affiliation) && n2.includes(affiliation)) {
+      score += 10;
+      break;
+    }
+  }
+
+  // Cap at 100
+  return Math.min(score, 100);
 }
 
 /**
