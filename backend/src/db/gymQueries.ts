@@ -139,7 +139,7 @@ export async function listGyms(
 
 /**
  * Load all US IBJJF gyms for matching cache.
- * Filters by countryCode='US' or country='United States of America'.
+ * Filters by countryCode='US' or country='United States'.
  * This reduces the comparison space by ~50% (from 8,614 to ~4,307 gyms).
  */
 export async function listUSIBJJFGyms(): Promise<SourceGymItem[]> {
@@ -155,7 +155,7 @@ export async function listUSIBJJFGyms(): Promise<SourceGymItem[]> {
         ExpressionAttributeValues: {
           ':pk': 'SRCGYM#IBJJF#',
           ':us': 'US',
-          ':usLong': 'United States of America',
+          ':usLong': 'United States',
         },
         ExclusiveStartKey: lastEvaluatedKey,
       })

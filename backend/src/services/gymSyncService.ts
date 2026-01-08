@@ -76,6 +76,7 @@ async function runMatchingForJJWLGyms(
   let autoLinked = 0;
   let pendingCreated = 0;
 
+  const matchingStart = Date.now();
   for (const gym of jjwlGyms) {
     // Get the full source gym from DB to check masterGymId
     const sourceGym = await getSourceGym(gym.org, gym.externalId);
@@ -97,6 +98,11 @@ async function runMatchingForJJWLGyms(
       );
     }
   }
+
+  const matchingDuration = Date.now() - matchingStart;
+  console.log(
+    `[GymSyncService] Matching completed in ${matchingDuration}ms (${(matchingDuration / 1000).toFixed(1)}s)`
+  );
 
   return { processed, autoLinked, pendingCreated };
 }

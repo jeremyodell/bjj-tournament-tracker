@@ -92,7 +92,7 @@ describe('listUSIBJJFGyms Integration Tests', () => {
       name: 'Delta BJJ',
       city: 'Chicago',
       state: 'IL',
-      country: 'United States of America',
+      country: 'United States',
     });
     await putSourceGym({
       org: 'IBJJF',
@@ -100,13 +100,13 @@ describe('listUSIBJJFGyms Integration Tests', () => {
       name: 'Echo Academy',
       city: 'Boston',
       state: 'MA',
-      country: 'United States of America',
+      country: 'United States',
     });
 
     const result = await listUSIBJJFGyms();
 
     expect(result).toHaveLength(2);
-    expect(result.every(gym => gym.country === 'United States of America')).toBe(true);
+    expect(result.every(gym => gym.country === 'United States')).toBe(true);
     expect(result.every(gym => gym.org === 'IBJJF')).toBe(true);
   });
 
