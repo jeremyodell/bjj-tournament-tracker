@@ -168,6 +168,11 @@ npm run db:seed            # Seed with real tournament data
 npm run db:seed:mock       # Seed with mock data (reliable for testing)
 npm run db:reset           # Delete all data and re-seed
 npm run sync               # Manual tournament sync from IBJJF/JJWL
+
+# User Data Cleanup (for testing fresh registration flows)
+npm run clean-users        # Clean production DynamoDB + Cognito (with confirmation)
+npm run clean-users:local  # Clean local DynamoDB only
+npm run clean-users:force  # Skip confirmation prompt
 ```
 
 ### Git Worktrees
