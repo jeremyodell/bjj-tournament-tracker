@@ -147,6 +147,268 @@ describe('gymSyncService', () => {
     });
   });
 
+  describe('syncJJWLGyms with caching optimization', () => {
+    const createMockSourceGym = (gym: NormalizedGym, masterGymId: string | null = null): SourceGymItem => ({
+      PK: `SRCGYM#${gym.org}#${gym.externalId}`,
+      SK: 'META',
+      GSI1PK: 'GYMS',
+      GSI1SK: `${gym.org}#${gym.name}`,
+      org: gym.org,
+      externalId: gym.externalId,
+      name: gym.name,
+      masterGymId,
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    });
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should load US IBJJF gyms only once (caching)', async () => {
+      const mockJJWLGyms: NormalizedGym[] = [
+        { org: 'JJWL', externalId: 'jjwl-1', name: 'Test Gym 1' },
+        { org: 'JJWL', externalId: 'jjwl-2', name: 'Test Gym 2' },
+      ];
+
+      const mockUSIBJJFGyms: SourceGymItem[] = [
+        {
+          PK: 'SRCGYM#IBJJF#us-1',
+          SK: 'META',
+          GSI1PK: 'GYMS',
+          GSI1SK: 'IBJJF#US Gym 1',
+          org: 'IBJJF',
+          externalId: 'us-1',
+          name: 'US Gym 1',
+          city: 'Austin',
+          countryCode: 'US',
+          masterGymId: null,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+      ];
+
+      const fetchMock = jest.spyOn(jjwlGymFetcher, 'fetchJJWLGyms');
+      const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
+      // Mock the function that will be added for caching
+      const listUSIBJJFGymsSpy = jest.spyOn(gymQueries as any, 'listUSIBJJFGyms');
+      const getSourceGymMock = jest.spyOn(gymQueries, 'getSourceGym');
+      const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
+
+      fetchMock.mockResolvedValue(mockJJWLGyms);
+      batchUpsertMock.mockResolvedValue(2);
+      listUSIBJJFGymsSpy.mockResolvedValue({ items: mockUSIBJJFGyms, lastKey: undefined });
+      getSourceGymMock.mockImplementation(async (_org, externalId) => {
+        const gym = mockJJWLGyms.find(g => g.externalId === externalId);
+        return gym ? createMockSourceGym(gym) : null;
+      });
+      processMatchesMock.mockResolvedValue({ autoLinked: 0, pendingCreated: 1 });
+
+      await syncJJWLGyms();
+
+      // KEY ASSERTION: listUSIBJJFGyms called ONCE, not once per JJWL gym
+      // This test will fail until caching is implemented
+      expect(listUSIBJJFGymsSpy).toHaveBeenCalledTimes(1);
+      expect(processMatchesMock).toHaveBeenCalledTimes(2); // Called for each JJWL gym
+    });
+
+    it('should auto-link high-confidence matches and create master gyms', async () => {
+      const mockJJWLGyms: NormalizedGym[] = [
+        { org: 'JJWL', externalId: 'jjwl-1', name: 'Gracie Barra Austin' },
+      ];
+
+      const fetchMock = jest.spyOn(jjwlGymFetcher, 'fetchJJWLGyms');
+      const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
+      const listUSIBJJFGymsSpy = jest.spyOn(gymQueries as any, 'listUSIBJJFGyms');
+      const getSourceGymMock = jest.spyOn(gymQueries, 'getSourceGym');
+      const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
+
+      fetchMock.mockResolvedValue(mockJJWLGyms);
+      batchUpsertMock.mockResolvedValue(1);
+      listUSIBJJFGymsSpy.mockResolvedValue({ items: [], lastKey: undefined });
+      getSourceGymMock.mockResolvedValue(createMockSourceGym(mockJJWLGyms[0]));
+      // Mock high-confidence match that creates master gym
+      processMatchesMock.mockResolvedValue({ autoLinked: 1, pendingCreated: 0 });
+
+      const result = await syncJJWLGyms();
+
+      expect(result.matching).toEqual({
+        processed: 1,
+        autoLinked: 1,
+        pendingCreated: 0,
+      });
+      expect(processMatchesMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('should create pending matches for medium-confidence matches', async () => {
+      const mockJJWLGyms: NormalizedGym[] = [
+        { org: 'JJWL', externalId: 'jjwl-1', name: 'Alliance BJJ Dallas' },
+        { org: 'JJWL', externalId: 'jjwl-2', name: 'Atos Jiu-Jitsu Houston' },
+      ];
+
+      const fetchMock = jest.spyOn(jjwlGymFetcher, 'fetchJJWLGyms');
+      const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
+      const listUSIBJJFGymsSpy = jest.spyOn(gymQueries as any, 'listUSIBJJFGyms');
+      const getSourceGymMock = jest.spyOn(gymQueries, 'getSourceGym');
+      const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
+
+      fetchMock.mockResolvedValue(mockJJWLGyms);
+      batchUpsertMock.mockResolvedValue(2);
+      listUSIBJJFGymsSpy.mockResolvedValue({ items: [], lastKey: undefined });
+      getSourceGymMock.mockImplementation(async (_org, externalId) => {
+        const gym = mockJJWLGyms.find(g => g.externalId === externalId);
+        return gym ? createMockSourceGym(gym) : null;
+      });
+      // Mock medium-confidence matches that create pending matches
+      processMatchesMock.mockResolvedValue({ autoLinked: 0, pendingCreated: 1 });
+
+      const result = await syncJJWLGyms();
+
+      expect(result.matching).toEqual({
+        processed: 2,
+        autoLinked: 0,
+        pendingCreated: 2, // One pending match per gym
+      });
+      expect(processMatchesMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('should skip matching for gyms already linked to master', async () => {
+      const mockJJWLGyms: NormalizedGym[] = [
+        { org: 'JJWL', externalId: 'jjwl-1', name: 'Linked Gym 1' },
+        { org: 'JJWL', externalId: 'jjwl-2', name: 'Unlinked Gym 2' },
+      ];
+
+      const fetchMock = jest.spyOn(jjwlGymFetcher, 'fetchJJWLGyms');
+      const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
+      const listUSIBJJFGymsSpy = jest.spyOn(gymQueries as any, 'listUSIBJJFGyms');
+      const getSourceGymMock = jest.spyOn(gymQueries, 'getSourceGym');
+      const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
+
+      fetchMock.mockResolvedValue(mockJJWLGyms);
+      batchUpsertMock.mockResolvedValue(2);
+      listUSIBJJFGymsSpy.mockResolvedValue({ items: [], lastKey: undefined });
+      getSourceGymMock.mockImplementation(async (_org, externalId) => {
+        // First gym is linked, second is not
+        const gym = mockJJWLGyms.find(g => g.externalId === externalId);
+        if (!gym) return null;
+        return createMockSourceGym(gym, externalId === 'jjwl-1' ? 'master-123' : null);
+      });
+      processMatchesMock.mockResolvedValue({ autoLinked: 0, pendingCreated: 1 });
+
+      const result = await syncJJWLGyms();
+
+      // Only called once for the unlinked gym
+      expect(processMatchesMock).toHaveBeenCalledTimes(1);
+      expect(result.matching).toEqual({
+        processed: 1,
+        autoLinked: 0,
+        pendingCreated: 1,
+      });
+    });
+
+    it('should have matching results defined after JJWL sync', async () => {
+      const mockJJWLGyms: NormalizedGym[] = [
+        { org: 'JJWL', externalId: 'jjwl-1', name: 'Test Gym' },
+      ];
+
+      const fetchMock = jest.spyOn(jjwlGymFetcher, 'fetchJJWLGyms');
+      const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
+      const listUSIBJJFGymsSpy = jest.spyOn(gymQueries as any, 'listUSIBJJFGyms');
+      const getSourceGymMock = jest.spyOn(gymQueries, 'getSourceGym');
+      const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
+
+      fetchMock.mockResolvedValue(mockJJWLGyms);
+      batchUpsertMock.mockResolvedValue(1);
+      listUSIBJJFGymsSpy.mockResolvedValue({ items: [], lastKey: undefined });
+      getSourceGymMock.mockResolvedValue(createMockSourceGym(mockJJWLGyms[0]));
+      processMatchesMock.mockResolvedValue({ autoLinked: 0, pendingCreated: 0 });
+
+      const result = await syncJJWLGyms();
+
+      // Matching should always be defined for JJWL sync
+      expect(result.matching).toBeDefined();
+      expect(result.matching).toHaveProperty('processed');
+      expect(result.matching).toHaveProperty('autoLinked');
+      expect(result.matching).toHaveProperty('pendingCreated');
+    });
+
+    it('should reflect correct processed count in matching results', async () => {
+      const mockJJWLGyms: NormalizedGym[] = [
+        { org: 'JJWL', externalId: 'jjwl-1', name: 'Gym 1' },
+        { org: 'JJWL', externalId: 'jjwl-2', name: 'Gym 2' },
+        { org: 'JJWL', externalId: 'jjwl-3', name: 'Gym 3' },
+      ];
+
+      const fetchMock = jest.spyOn(jjwlGymFetcher, 'fetchJJWLGyms');
+      const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
+      const listUSIBJJFGymsSpy = jest.spyOn(gymQueries as any, 'listUSIBJJFGyms');
+      const getSourceGymMock = jest.spyOn(gymQueries, 'getSourceGym');
+      const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
+
+      fetchMock.mockResolvedValue(mockJJWLGyms);
+      batchUpsertMock.mockResolvedValue(3);
+      listUSIBJJFGymsSpy.mockResolvedValue({ items: [], lastKey: undefined });
+      getSourceGymMock.mockImplementation(async (_org, externalId) => {
+        const gym = mockJJWLGyms.find(g => g.externalId === externalId);
+        return gym ? createMockSourceGym(gym) : null;
+      });
+      // Mix of results: 1 auto-linked, 1 pending
+      processMatchesMock.mockResolvedValueOnce({ autoLinked: 1, pendingCreated: 0 })
+        .mockResolvedValueOnce({ autoLinked: 0, pendingCreated: 1 })
+        .mockResolvedValueOnce({ autoLinked: 0, pendingCreated: 0 });
+
+      const result = await syncJJWLGyms();
+
+      expect(result.matching).toEqual({
+        processed: 3,
+        autoLinked: 1,
+        pendingCreated: 1,
+      });
+      expect(processMatchesMock).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe('syncIBJJFGyms without matching', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should NOT run matching during IBJJF sync', async () => {
+      const mockGyms: IBJJFNormalizedGym[] = [
+        {
+          org: 'IBJJF',
+          externalId: 'ibjjf-1',
+          name: 'Test Gym',
+          city: 'Austin',
+          countryCode: 'US',
+        },
+      ];
+
+      const fetchCountMock = jest.spyOn(ibjjfGymFetcher, 'fetchIBJJFGymCount');
+      const getSyncMetaMock = jest.spyOn(gymQueries, 'getGymSyncMeta');
+      const fetchAllMock = jest.spyOn(ibjjfGymFetcher, 'fetchAllIBJJFGyms');
+      const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
+      const updateSyncMetaMock = jest.spyOn(gymQueries, 'updateGymSyncMeta');
+      const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
+
+      fetchCountMock.mockResolvedValue(1);
+      getSyncMetaMock.mockResolvedValue(null); // First sync
+      fetchAllMock.mockResolvedValue(mockGyms);
+      batchUpsertMock.mockResolvedValue(1);
+      updateSyncMetaMock.mockResolvedValue();
+
+      const result = await syncIBJJFGyms();
+
+      // processGymMatches should NOT be called during IBJJF sync
+      expect(processMatchesMock).not.toHaveBeenCalled();
+
+      // matching field should be undefined (not run)
+      expect(result.matching).toBeUndefined();
+      expect(result.fetched).toBe(1);
+      expect(result.saved).toBe(1);
+    });
+  });
+
   describe('getActiveGymIds', () => {
     it('returns empty Map (MVP placeholder)', async () => {
       const result = await getActiveGymIds();
