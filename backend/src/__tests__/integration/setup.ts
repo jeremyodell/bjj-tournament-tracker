@@ -346,3 +346,89 @@ export async function putSourceGym(
     })
   );
 }
+
+/**
+ * Delete all master gym records from the test table
+ */
+export async function deleteAllMasterGyms(): Promise<void> {
+  // Scan for all master gym items (MASTERGYM#)
+  const scanResult = await testDocClient.send(
+    new ScanCommand({
+      TableName: TEST_TABLE_NAME,
+      FilterExpression: 'begins_with(PK, :mastergym)',
+      ExpressionAttributeValues: {
+        ':mastergym': 'MASTERGYM#',
+      },
+    })
+  );
+
+  if (!scanResult.Items || scanResult.Items.length === 0) {
+    return;
+  }
+
+  // Delete items in batches of 25 (BatchWrite limit)
+  const batches: Array<{ PK: string; SK: string }>[] = [];
+  for (let i = 0; i < scanResult.Items.length; i += 25) {
+    batches.push(
+      scanResult.Items.slice(i, i + 25).map((item) => ({
+        PK: item.PK as string,
+        SK: item.SK as string,
+      }))
+    );
+  }
+
+  for (const batch of batches) {
+    await testDocClient.send(
+      new BatchWriteCommand({
+        RequestItems: {
+          [TEST_TABLE_NAME]: batch.map((key) => ({
+            DeleteRequest: { Key: key },
+          })),
+        },
+      })
+    );
+  }
+}
+
+/**
+ * Delete all pending match records from the test table
+ */
+export async function deleteAllPendingMatches(): Promise<void> {
+  // Scan for all pending match items (PENDINGMATCH#)
+  const scanResult = await testDocClient.send(
+    new ScanCommand({
+      TableName: TEST_TABLE_NAME,
+      FilterExpression: 'begins_with(PK, :pendingmatch)',
+      ExpressionAttributeValues: {
+        ':pendingmatch': 'PENDINGMATCH#',
+      },
+    })
+  );
+
+  if (!scanResult.Items || scanResult.Items.length === 0) {
+    return;
+  }
+
+  // Delete items in batches of 25 (BatchWrite limit)
+  const batches: Array<{ PK: string; SK: string }>[] = [];
+  for (let i = 0; i < scanResult.Items.length; i += 25) {
+    batches.push(
+      scanResult.Items.slice(i, i + 25).map((item) => ({
+        PK: item.PK as string,
+        SK: item.SK as string,
+      }))
+    );
+  }
+
+  for (const batch of batches) {
+    await testDocClient.send(
+      new BatchWriteCommand({
+        RequestItems: {
+          [TEST_TABLE_NAME]: batch.map((key) => ({
+            DeleteRequest: { Key: key },
+          })),
+        },
+      })
+    );
+  }
+}
