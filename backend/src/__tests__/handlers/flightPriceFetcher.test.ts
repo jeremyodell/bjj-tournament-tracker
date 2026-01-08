@@ -51,6 +51,7 @@ function createMockTournament(overrides: Partial<TournamentItem> = {}): Tourname
     org: 'IBJJF',
     externalId: '123',
     name: 'Miami Open',
+    slug: null,
     city: 'Miami',
     venue: 'Convention Center',
     country: 'US',

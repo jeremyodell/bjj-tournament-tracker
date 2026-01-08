@@ -53,6 +53,7 @@ async function upsertTournaments(tournaments: NormalizedTournament[]): Promise<n
               GSI1PK: 'TOURNAMENTS',
               GSI1SK: `${t.startDate}#${t.org}#${t.externalId}`,
               ...t,
+              slug: null, // Generated on-demand
               createdAt: now,
               updatedAt: now,
             },

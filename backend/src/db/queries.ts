@@ -191,7 +191,8 @@ export async function upsertTournaments(
               GSI1PK: 'TOURNAMENTS',
               GSI1SK: `${t.startDate}#${t.org}#${t.externalId}`,
               ...t,
-              // Ensure geocoding fields have defaults
+              // Ensure optional fields have defaults
+              slug: null, // Generated on-demand by slugService
               lat: t.lat ?? null,
               lng: t.lng ?? null,
               venueId: t.venueId ?? null,

@@ -42,6 +42,7 @@ describe('formatTournamentResponse', () => {
     org: 'IBJJF',
     externalId: '123',
     name: 'Pan American',
+    slug: null,
     city: 'Irvine',
     venue: 'Pyramid',
     country: 'USA',
