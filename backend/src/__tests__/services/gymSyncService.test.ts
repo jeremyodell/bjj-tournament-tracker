@@ -197,7 +197,7 @@ describe('gymSyncService', () => {
 
       fetchMock.mockResolvedValue(mockJJWLGyms);
       batchUpsertMock.mockResolvedValue(2);
-      listUSIBJJFGymsSpy.mockResolvedValue({ items: mockUSIBJJFGyms, lastKey: undefined });
+      listUSIBJJFGymsSpy.mockResolvedValue(mockUSIBJJFGyms);
       getSourceGymMock.mockImplementation(async (_org, externalId) => {
         const gym = mockJJWLGyms.find(g => g.externalId === externalId);
         return gym ? createMockSourceGym(gym) : null;
@@ -225,7 +225,7 @@ describe('gymSyncService', () => {
 
       fetchMock.mockResolvedValue(mockJJWLGyms);
       batchUpsertMock.mockResolvedValue(1);
-      listUSIBJJFGymsSpy.mockResolvedValue({ items: [], lastKey: undefined });
+      listUSIBJJFGymsSpy.mockResolvedValue([]);
       getSourceGymMock.mockResolvedValue(createMockSourceGym(mockJJWLGyms[0]));
       // Mock high-confidence match that creates master gym
       processMatchesMock.mockResolvedValue({ autoLinked: 1, pendingCreated: 0 });
@@ -254,7 +254,7 @@ describe('gymSyncService', () => {
 
       fetchMock.mockResolvedValue(mockJJWLGyms);
       batchUpsertMock.mockResolvedValue(2);
-      listUSIBJJFGymsSpy.mockResolvedValue({ items: [], lastKey: undefined });
+      listUSIBJJFGymsSpy.mockResolvedValue([]);
       getSourceGymMock.mockImplementation(async (_org, externalId) => {
         const gym = mockJJWLGyms.find(g => g.externalId === externalId);
         return gym ? createMockSourceGym(gym) : null;
@@ -286,7 +286,7 @@ describe('gymSyncService', () => {
 
       fetchMock.mockResolvedValue(mockJJWLGyms);
       batchUpsertMock.mockResolvedValue(2);
-      listUSIBJJFGymsSpy.mockResolvedValue({ items: [], lastKey: undefined });
+      listUSIBJJFGymsSpy.mockResolvedValue([]);
       getSourceGymMock.mockImplementation(async (_org, externalId) => {
         // First gym is linked, second is not
         const gym = mockJJWLGyms.find(g => g.externalId === externalId);
@@ -319,7 +319,7 @@ describe('gymSyncService', () => {
 
       fetchMock.mockResolvedValue(mockJJWLGyms);
       batchUpsertMock.mockResolvedValue(1);
-      listUSIBJJFGymsSpy.mockResolvedValue({ items: [], lastKey: undefined });
+      listUSIBJJFGymsSpy.mockResolvedValue([]);
       getSourceGymMock.mockResolvedValue(createMockSourceGym(mockJJWLGyms[0]));
       processMatchesMock.mockResolvedValue({ autoLinked: 0, pendingCreated: 0 });
 
@@ -347,7 +347,7 @@ describe('gymSyncService', () => {
 
       fetchMock.mockResolvedValue(mockJJWLGyms);
       batchUpsertMock.mockResolvedValue(3);
-      listUSIBJJFGymsSpy.mockResolvedValue({ items: [], lastKey: undefined });
+      listUSIBJJFGymsSpy.mockResolvedValue([]);
       getSourceGymMock.mockImplementation(async (_org, externalId) => {
         const gym = mockJJWLGyms.find(g => g.externalId === externalId);
         return gym ? createMockSourceGym(gym) : null;

@@ -1,4 +1,4 @@
-import { QueryCommand, PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { QueryCommand, ScanCommand, PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { docClient, TABLE_NAME, GSI1_NAME } from './client.js';
 import {
   buildSourceGymPK,
@@ -135,6 +135,40 @@ export async function listGyms(
     items: (result.Items || []) as SourceGymItem[],
     lastKey: result.LastEvaluatedKey,
   };
+}
+
+/**
+ * Load all US IBJJF gyms for matching cache.
+ * Filters by countryCode='US' or country='United States of America'.
+ * This reduces the comparison space by ~50% (from 8,614 to ~4,307 gyms).
+ */
+export async function listUSIBJJFGyms(): Promise<SourceGymItem[]> {
+  const gyms: SourceGymItem[] = [];
+  let lastEvaluatedKey: Record<string, any> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new ScanCommand({
+        TableName: TABLE_NAME,
+        FilterExpression:
+          'begins_with(PK, :pk) AND (countryCode = :us OR country = :usLong)',
+        ExpressionAttributeValues: {
+          ':pk': 'SRCGYM#IBJJF#',
+          ':us': 'US',
+          ':usLong': 'United States of America',
+        },
+        ExclusiveStartKey: lastEvaluatedKey,
+      })
+    );
+
+    if (result.Items) {
+      gyms.push(...(result.Items as SourceGymItem[]));
+    }
+
+    lastEvaluatedKey = result.LastEvaluatedKey;
+  } while (lastEvaluatedKey);
+
+  return gyms;
 }
 
 /**

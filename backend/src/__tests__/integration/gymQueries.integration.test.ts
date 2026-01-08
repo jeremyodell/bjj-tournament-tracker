@@ -76,13 +76,12 @@ describe('listUSIBJJFGyms Integration Tests', () => {
 
     const result = await listUSIBJJFGyms();
 
-    expect(result.items).toHaveLength(3);
-    expect(result.items.every(gym => gym.countryCode === 'US')).toBe(true);
-    expect(result.items.every(gym => gym.org === 'IBJJF')).toBe(true);
-    // Verify sorted by name
-    expect(result.items[0].name).toBe('Alpha BJJ');
-    expect(result.items[1].name).toBe('Beta Academy');
-    expect(result.items[2].name).toBe('Charlie BJJ');
+    expect(result).toHaveLength(3);
+    expect(result.every(gym => gym.countryCode === 'US')).toBe(true);
+    expect(result.every(gym => gym.org === 'IBJJF')).toBe(true);
+    // Results may not be sorted (ScanCommand doesn't guarantee order)
+    const names = result.map(g => g.name).sort();
+    expect(names).toEqual(['Alpha BJJ', 'Beta Academy', 'Charlie BJJ']);
   });
 
   it('should return US gyms identified by country name', async () => {
@@ -106,9 +105,9 @@ describe('listUSIBJJFGyms Integration Tests', () => {
 
     const result = await listUSIBJJFGyms();
 
-    expect(result.items).toHaveLength(2);
-    expect(result.items.every(gym => gym.country === 'United States of America')).toBe(true);
-    expect(result.items.every(gym => gym.org === 'IBJJF')).toBe(true);
+    expect(result).toHaveLength(2);
+    expect(result.every(gym => gym.country === 'United States of America')).toBe(true);
+    expect(result.every(gym => gym.org === 'IBJJF')).toBe(true);
   });
 
   it('should exclude non-US gyms', async () => {
@@ -143,9 +142,9 @@ describe('listUSIBJJFGyms Integration Tests', () => {
     const result = await listUSIBJJFGyms();
 
     // Should only return the US gym
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0].countryCode).toBe('US');
-    expect(result.items[0].name).toBe('US Gym 1');
+    expect(result).toHaveLength(1);
+    expect(result[0].countryCode).toBe('US');
+    expect(result[0].name).toBe('US Gym 1');
   });
 
   it('should exclude JJWL gyms (only IBJJF)', async () => {
@@ -172,12 +171,12 @@ describe('listUSIBJJFGyms Integration Tests', () => {
     const result = await listUSIBJJFGyms();
 
     // Should only return IBJJF gym
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0].org).toBe('IBJJF');
-    expect(result.items[0].name).toBe('IBJJF Academy');
+    expect(result).toHaveLength(1);
+    expect(result[0].org).toBe('IBJJF');
+    expect(result[0].name).toBe('IBJJF Academy');
   });
 
-  it('should handle pagination correctly', async () => {
+  it('should handle pagination internally (fetch all gyms)', async () => {
     // Seed 5 US IBJJF gyms
     await putSourceGym({
       org: 'IBJJF',
@@ -220,25 +219,15 @@ describe('listUSIBJJFGyms Integration Tests', () => {
       countryCode: 'US',
     });
 
-    // First page: limit 2
-    const page1 = await listUSIBJJFGyms(2);
-    expect(page1.items).toHaveLength(2);
-    expect(page1.lastKey).toBeDefined();
-    expect(page1.items[0].name).toBe('Gym A');
-    expect(page1.items[1].name).toBe('Gym B');
+    // Function should fetch all gyms with internal pagination
+    const result = await listUSIBJJFGyms();
+    expect(result).toHaveLength(5);
+    expect(result.every(gym => gym.org === 'IBJJF')).toBe(true);
+    expect(result.every(gym => gym.countryCode === 'US')).toBe(true);
 
-    // Second page: limit 2, using lastKey
-    const page2 = await listUSIBJJFGyms(2, page1.lastKey);
-    expect(page2.items).toHaveLength(2);
-    expect(page2.lastKey).toBeDefined();
-    expect(page2.items[0].name).toBe('Gym C');
-    expect(page2.items[1].name).toBe('Gym D');
-
-    // Third page: limit 2, should only return 1 item (last one)
-    const page3 = await listUSIBJJFGyms(2, page2.lastKey);
-    expect(page3.items).toHaveLength(1);
-    expect(page3.lastKey).toBeUndefined(); // No more items
-    expect(page3.items[0].name).toBe('Gym E');
+    // Verify all gyms are present (order not guaranteed with Scan)
+    const names = result.map(g => g.name).sort();
+    expect(names).toEqual(['Gym A', 'Gym B', 'Gym C', 'Gym D', 'Gym E']);
   });
 
   it('should return empty array when no US gyms exist', async () => {
@@ -254,7 +243,6 @@ describe('listUSIBJJFGyms Integration Tests', () => {
 
     const result = await listUSIBJJFGyms();
 
-    expect(result.items).toHaveLength(0);
-    expect(result.lastKey).toBeUndefined();
+    expect(result).toHaveLength(0);
   });
 });
