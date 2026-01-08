@@ -11,6 +11,7 @@ import {
   getGymSyncMeta,
   updateGymSyncMeta,
   listUSIBJJFGyms,
+  listAllJJWLGyms,
 } from '../db/gymQueries.js';
 import { queryTournaments } from '../db/queries.js';
 import { processGymMatches } from './gymMatchingService.js';
@@ -59,18 +60,31 @@ export interface IBJJFSyncOptions {
 
 /**
  * Run matching for JJWL gyms against cached US IBJJF gyms.
- * Loads US IBJJF gyms once, then compares all JJWL gyms against that cache.
+ * Loads both JJWL and US IBJJF gyms once to eliminate N+1 query pattern.
  */
 async function runMatchingForJJWLGyms(
   jjwlGyms: NormalizedGym[]
 ): Promise<{ processed: number; autoLinked: number; pendingCreated: number }> {
-  console.log('[GymSyncService] Loading US IBJJF gyms for matching...');
+  console.log('[GymSyncService] Loading gyms for matching...');
   const startLoad = Date.now();
-  const usIbjjfGyms = await listUSIBJJFGyms();
+
+  // Load both JJWL and US IBJJF gyms in parallel
+  const [jjwlSourceGyms, usIbjjfGyms] = await Promise.all([
+    listAllJJWLGyms(),
+    listUSIBJJFGyms(),
+  ]);
+
   const loadDuration = Date.now() - startLoad;
   console.log(
-    `[GymSyncService] Loaded ${usIbjjfGyms.length} US IBJJF gyms in ${loadDuration}ms`
+    `[GymSyncService] Loaded ${jjwlSourceGyms.length} JJWL gyms and ${usIbjjfGyms.length} US IBJJF gyms in ${loadDuration}ms`
   );
+
+  // Create Map for O(1) lookup of JJWL source gyms by key
+  const jjwlGymMap = new Map<string, SourceGymItem>();
+  for (const gym of jjwlSourceGyms) {
+    const key = `${gym.org}#${gym.externalId}`;
+    jjwlGymMap.set(key, gym);
+  }
 
   let processed = 0;
   let autoLinked = 0;
@@ -78,8 +92,10 @@ async function runMatchingForJJWLGyms(
 
   const matchingStart = Date.now();
   for (const gym of jjwlGyms) {
-    // Get the full source gym from DB to check masterGymId
-    const sourceGym = await getSourceGym(gym.org, gym.externalId);
+    // Lookup source gym from Map (O(1) instead of DB query)
+    const key = `${gym.org}#${gym.externalId}`;
+    const sourceGym = jjwlGymMap.get(key);
+
     if (!sourceGym || sourceGym.masterGymId) {
       // Already linked or not found, skip
       continue;

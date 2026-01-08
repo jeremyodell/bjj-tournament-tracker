@@ -172,6 +172,36 @@ export async function listUSIBJJFGyms(): Promise<SourceGymItem[]> {
 }
 
 /**
+ * Load all JJWL source gyms for matching cache.
+ * Eliminates N+1 query pattern (5,780 GetItem calls).
+ */
+export async function listAllJJWLGyms(): Promise<SourceGymItem[]> {
+  const gyms: SourceGymItem[] = [];
+  let lastEvaluatedKey: Record<string, any> | undefined;
+
+  do {
+    const result = await docClient.send(
+      new ScanCommand({
+        TableName: TABLE_NAME,
+        FilterExpression: 'begins_with(PK, :pk)',
+        ExpressionAttributeValues: {
+          ':pk': 'SRCGYM#JJWL#',
+        },
+        ExclusiveStartKey: lastEvaluatedKey,
+      })
+    );
+
+    if (result.Items) {
+      gyms.push(...(result.Items as SourceGymItem[]));
+    }
+
+    lastEvaluatedKey = result.LastEvaluatedKey;
+  } while (lastEvaluatedKey);
+
+  return gyms;
+}
+
+/**
  * Upsert a tournament gym roster
  */
 export async function upsertGymRoster(
