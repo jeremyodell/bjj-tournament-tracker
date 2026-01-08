@@ -23,7 +23,7 @@ export default function ProtectedLayout({
   }, [isLoading, isAuthenticated, router]);
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen">
       <main>
         {isLoading ? (
           <div className="flex items-center justify-center min-h-[60vh]">

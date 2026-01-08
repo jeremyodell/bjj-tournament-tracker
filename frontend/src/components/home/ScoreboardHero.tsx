@@ -5,22 +5,6 @@ import Link from 'next/link';
 export function ScoreboardHero() {
   return (
     <section className="relative overflow-hidden py-16 sm:py-24">
-      {/* LED Grid Background Effect */}
-      <div
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(255, 215, 0, 0.1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 215, 0, 0.1) 1px, transparent 1px)
-          `,
-          backgroundSize: '60px 60px',
-        }}
-      />
-
-      {/* Animated Glow Orbs */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl opacity-20 animate-pulse" style={{ background: 'var(--scoreboard-yellow)' }} />
-      <div className="absolute bottom-1/3 right-1/4 w-80 h-80 rounded-full blur-3xl opacity-15 animate-pulse" style={{ background: 'var(--accent-ibjjf)', animationDelay: '1s' }} />
-
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-5xl mx-auto text-center">
           {/* LED Status Bar */}

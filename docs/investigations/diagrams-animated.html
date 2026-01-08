@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subagent Token Consumption</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      color: #fff;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .subtitle {
+      font-size: 16px;
+      color: #94a3b8;
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    .container {
+      display: flex;
+      gap: 60px;
+      align-items: flex-start;
+    }
+
+    .scenario {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .scenario-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      padding: 8px 20px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.1);
+    }
+
+    .scenario-title.expected {
+      background: rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+    }
+
+    .scenario-title.actual {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+
+    .orchestrator {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      padding: 12px 30px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    }
+
+    .agents-row {
+      display: flex;
+      gap: 15px;
+    }
+
+    .agent {
+      width: 140px;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      border-radius: 16px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .agent.green {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+
+    .agent.purple {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+    }
+
+    .agent-name {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 5px;
+    }
+
+    .agent-task {
+      font-size: 11px;
+      opacity: 0.8;
+      margin-bottom: 10px;
+    }
+
+    .token-display {
+      background: rgba(0,0,0,0.3);
+      padding: 8px 15px;
+      border-radius: 8px;
+      font-family: 'Monaco', 'Consolas', monospace;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .nested-agent {
+      margin-top: 12px;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      border-radius: 10px;
+      padding: 10px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(239, 68, 68, 0.4);
+      opacity: 0;
+      transform: scale(0.8);
+      transition: all 0.3s ease;
+    }
+
+    .nested-agent.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .nested-agent .agent-name {
+      font-size: 11px;
+    }
+
+    .nested-agent .token-display {
+      font-size: 12px;
+      padding: 5px 10px;
+    }
+
+    .total-bar {
+      margin-top: 30px;
+      padding: 15px 30px;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .total-bar.good {
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+    }
+
+    .total-bar.bad {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+    }
+
+    .total-tokens {
+      font-family: 'Monaco', 'Consolas', monospace;
+      font-size: 24px;
+    }
+
+    .cost {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    /* Token drain animation */
+    .token-particle {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: #fbbf24;
+      border-radius: 50%;
+      opacity: 0;
+      box-shadow: 0 0 10px #fbbf24;
+    }
+
+    /* Pulse animation for active consumption */
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+
+    .consuming {
+      animation: pulse 0.5s ease-in-out infinite;
+    }
+
+    /* Counter animation */
+    @keyframes countUp {
+      from { opacity: 0.5; }
+      to { opacity: 1; }
+    }
+
+    .counting {
+      animation: countUp 0.1s ease-in-out;
+    }
+
+    /* Progress bar for token consumption */
+    .progress-container {
+      width: 100%;
+      height: 4px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #fbbf24, #f59e0b);
+      width: 0%;
+      transition: width 0.1s linear;
+      box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+    }
+
+    /* Legend */
+    .legend {
+      margin-top: 40px;
+      display: flex;
+      gap: 30px;
+      padding: 15px 25px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+    }
+
+    .legend-color.task { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    .legend-color.nested { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    .legend-color.tokens { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+
+    /* Controls */
+    .controls {
+      margin-top: 30px;
+      display: flex;
+      gap: 15px;
+    }
+
+    button {
+      padding: 12px 30px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+    }
+
+    button.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    }
+
+    button.secondary {
+      background: rgba(255,255,255,0.1);
+      color: white;
+    }
+
+    button.secondary:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    /* Comparison arrow */
+    .comparison-arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+    }
+
+    .arrow-text {
+      font-size: 12px;
+      margin-bottom: 5px;
+    }
+
+    .arrow {
+      font-size: 30px;
+    }
+
+    .multiplier {
+      margin-top: 10px;
+      font-size: 24px;
+      font-weight: 700;
+      color: #ef4444;
+    }
+  </style>
+</head>
+<body>
+  <h1>Subagents in Claude Code</h1>
+  <p class="subtitle">Watch what happens when agents spawn nested agents</p>
+
+  <div class="container">
+    <!-- Expected Scenario -->
+    <div class="scenario" id="expected">
+      <div class="scenario-title expected">Expected</div>
+      <div class="orchestrator">ORCHESTRATOR</div>
+      <div class="agents-row">
+        <div class="agent" id="exp-agent1">
+          <div class="agent-name">Agent 1</div>
+          <div class="agent-task">ODE-44</div>
+          <div class="token-display" id="exp-tokens1">0k</div>
+          <div class="progress-container">
+            <div class="progress-bar" id="exp-progress1"></div>
+          </div>
+        </div>
+        <div class="agent green" id="exp-agent2">
+          <div class="agent-name">Agent 2</div>
+          <div class="agent-task">ODE-45</div>
+          <div class="token-display" id="exp-tokens2">0k</div>
+          <div class="progress-container">
+            <div class="progress-bar" id="exp-progress2"></div>
+          </div>
+        </div>
+        <div class="agent purple" id="exp-agent3">
+          <div class="agent-name">Agent 3</div>
+          <div class="agent-task">ODE-46</div>
+          <div class="token-display" id="exp-tokens3">0k</div>
+          <div class="progress-container">
+            <div class="progress-bar" id="exp-progress3"></div>
+          </div>
+        </div>
+      </div>
+      <div class="total-bar good" id="exp-total">
+        <span>Total:</span>
+        <span class="total-tokens" id="exp-total-tokens">0k</span>
+        <span class="cost" id="exp-cost">$0</span>
+      </div>
+    </div>
+
+    <!-- Comparison Arrow -->
+    <div class="comparison-arrow">
+      <div class="arrow-text">vs</div>
+      <div class="arrow">→</div>
+      <div class="multiplier" id="multiplier">1x</div>
+    </div>
+
+    <!-- Actual Scenario -->
+    <div class="scenario" id="actual">
+      <div class="scenario-title actual">Actual</div>
+      <div class="orchestrator">ORCHESTRATOR</div>
+      <div class="agents-row">
+        <div class="agent" id="act-agent1">
+          <div class="agent-name">Agent 1</div>
+          <div class="agent-task">ODE-44</div>
+          <div class="token-display" id="act-tokens1">0k</div>
+          <div class="progress-container">
+            <div class="progress-bar" id="act-progress1"></div>
+          </div>
+          <div class="nested-agent" id="nested1">
+            <div class="agent-name">CodeReview</div>
+            <div class="token-display" id="nested-tokens1">0k</div>
+            <div class="progress-container">
+              <div class="progress-bar" id="nested-progress1"></div>
+            </div>
+          </div>
+        </div>
+        <div class="agent green" id="act-agent2">
+          <div class="agent-name">Agent 2</div>
+          <div class="agent-task">ODE-45</div>
+          <div class="token-display" id="act-tokens2">0k</div>
+          <div class="progress-container">
+            <div class="progress-bar" id="act-progress2"></div>
+          </div>
+          <div class="nested-agent" id="nested2">
+            <div class="agent-name">CodeReview</div>
+            <div class="token-display" id="nested-tokens2">0k</div>
+            <div class="progress-container">
+              <div class="progress-bar" id="nested-progress2"></div>
+            </div>
+          </div>
+        </div>
+        <div class="agent purple" id="act-agent3">
+          <div class="agent-name">Agent 3</div>
+          <div class="agent-task">ODE-46</div>
+          <div class="token-display" id="act-tokens3">0k</div>
+          <div class="progress-container">
+            <div class="progress-bar" id="act-progress3"></div>
+          </div>
+          <div class="nested-agent" id="nested3">
+            <div class="agent-name">CodeReview</div>
+            <div class="token-display" id="nested-tokens3">0k</div>
+            <div class="progress-container">
+              <div class="progress-bar" id="nested-progress3"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="total-bar bad" id="act-total">
+        <span>Total:</span>
+        <span class="total-tokens" id="act-total-tokens">0k</span>
+        <span class="cost" id="act-cost">$0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-color task"></div>
+      <span>Task Agent</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color nested"></div>
+      <span>Nested Agent (the problem!)</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color tokens"></div>
+      <span>Token Consumption</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="primary" onclick="startAnimation()">▶ Play Animation</button>
+    <button class="secondary" onclick="resetAnimation()">↺ Reset</button>
+  </div>
+
+  <script>
+    let animationRunning = false;
+    let animationFrame;
+
+    const config = {
+      expectedPerAgent: 500,  // 500k per agent
+      actualPerAgent: 700,    // 700k per agent (with nested)
+      nestedPerAgent: 500,    // 500k for nested agent
+      animationSpeed: 30,     // ms per frame
+      tokensPerFrame: 15,     // k tokens per frame
+    };
+
+    let state = {
+      exp: [0, 0, 0],
+      act: [0, 0, 0],
+      nested: [0, 0, 0],
+      nestedVisible: [false, false, false],
+      phase: 0  // 0: task agents, 1: nested spawn, 2: nested consume
+    };
+
+    function formatTokens(k) {
+      if (k >= 1000) {
+        return (k / 1000).toFixed(1) + 'M';
+      }
+      return k + 'k';
+    }
+
+    function formatCost(tokens) {
+      // Sonnet pricing: ~$3/1M input
+      const cost = (tokens / 1000) * 3;
+      return '$' + cost.toFixed(0);
+    }
+
+    function updateDisplay() {
+      // Expected agents
+      for (let i = 0; i < 3; i++) {
+        document.getElementById(`exp-tokens${i+1}`).textContent = formatTokens(state.exp[i]);
+        document.getElementById(`exp-progress${i+1}`).style.width =
+          (state.exp[i] / config.expectedPerAgent * 100) + '%';
+      }
+
+      // Actual agents
+      for (let i = 0; i < 3; i++) {
+        document.getElementById(`act-tokens${i+1}`).textContent = formatTokens(state.act[i]);
+        document.getElementById(`act-progress${i+1}`).style.width =
+          (state.act[i] / config.actualPerAgent * 100) + '%';
+
+        // Nested agents
+        if (state.nestedVisible[i]) {
+          document.getElementById(`nested${i+1}`).classList.add('visible');
+          document.getElementById(`nested-tokens${i+1}`).textContent = formatTokens(state.nested[i]);
+          document.getElementById(`nested-progress${i+1}`).style.width =
+            (state.nested[i] / config.nestedPerAgent * 100) + '%';
+        }
+      }
+
+      // Totals
+      const expTotal = state.exp.reduce((a, b) => a + b, 0);
+      const actTotal = state.act.reduce((a, b) => a + b, 0) + state.nested.reduce((a, b) => a + b, 0);
+
+      document.getElementById('exp-total-tokens').textContent = formatTokens(expTotal);
+      document.getElementById('exp-cost').textContent = formatCost(expTotal);
+
+      document.getElementById('act-total-tokens').textContent = formatTokens(actTotal);
+      document.getElementById('act-cost').textContent = formatCost(actTotal);
+
+      // Multiplier
+      if (expTotal > 0) {
+        const mult = actTotal / expTotal;
+        document.getElementById('multiplier').textContent = mult.toFixed(1) + 'x';
+        if (mult > 2) {
+          document.getElementById('multiplier').style.color = '#ef4444';
+        }
+      }
+    }
+
+    function animate() {
+      if (!animationRunning) return;
+
+      let allDone = true;
+
+      // Phase 0: Both scenarios consume tokens for main agents
+      if (state.phase === 0) {
+        for (let i = 0; i < 3; i++) {
+          if (state.exp[i] < config.expectedPerAgent) {
+            state.exp[i] = Math.min(state.exp[i] + config.tokensPerFrame, config.expectedPerAgent);
+            allDone = false;
+          }
+          if (state.act[i] < config.actualPerAgent * 0.4) { // Only partial before nested spawns
+            state.act[i] = Math.min(state.act[i] + config.tokensPerFrame, config.actualPerAgent * 0.4);
+            allDone = false;
+          }
+        }
+
+        if (allDone) {
+          state.phase = 1;
+          allDone = false;
+        }
+      }
+
+      // Phase 1: Nested agents spawn (visual pop-in)
+      if (state.phase === 1) {
+        for (let i = 0; i < 3; i++) {
+          if (!state.nestedVisible[i]) {
+            state.nestedVisible[i] = true;
+            // Add pulse effect to parent
+            document.getElementById(`act-agent${i+1}`).classList.add('consuming');
+          }
+        }
+        state.phase = 2;
+        allDone = false;
+      }
+
+      // Phase 2: Nested agents consume tokens (this is where it explodes)
+      if (state.phase === 2) {
+        allDone = true;
+        for (let i = 0; i < 3; i++) {
+          // Continue main agent consumption
+          if (state.act[i] < config.actualPerAgent) {
+            state.act[i] = Math.min(state.act[i] + config.tokensPerFrame * 0.5, config.actualPerAgent);
+            allDone = false;
+          }
+          // Nested agent consumption (faster to show the drain)
+          if (state.nested[i] < config.nestedPerAgent) {
+            state.nested[i] = Math.min(state.nested[i] + config.tokensPerFrame * 1.5, config.nestedPerAgent);
+            allDone = false;
+          }
+        }
+      }
+
+      updateDisplay();
+
+      if (!allDone) {
+        animationFrame = setTimeout(animate, config.animationSpeed);
+      } else {
+        animationRunning = false;
+        // Remove pulse effects
+        for (let i = 0; i < 3; i++) {
+          document.getElementById(`act-agent${i+1}`).classList.remove('consuming');
+        }
+      }
+    }
+
+    function startAnimation() {
+      if (animationRunning) return;
+      resetAnimation();
+      animationRunning = true;
+      animate();
+    }
+
+    function resetAnimation() {
+      animationRunning = false;
+      clearTimeout(animationFrame);
+
+      state = {
+        exp: [0, 0, 0],
+        act: [0, 0, 0],
+        nested: [0, 0, 0],
+        nestedVisible: [false, false, false],
+        phase: 0
+      };
+
+      // Reset nested visibility
+      for (let i = 0; i < 3; i++) {
+        document.getElementById(`nested${i+1}`).classList.remove('visible');
+        document.getElementById(`act-agent${i+1}`).classList.remove('consuming');
+      }
+
+      document.getElementById('multiplier').textContent = '1x';
+      document.getElementById('multiplier').style.color = '#94a3b8';
+
+      updateDisplay();
+    }
+
+    // Initialize
+    resetAnimation();
+  </script>
+</body>
+</html>

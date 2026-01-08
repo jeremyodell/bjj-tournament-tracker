@@ -559,6 +559,82 @@ Resources:
         External:
           - '@aws-sdk/*'
 
+  OnboardingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub bjj-tournament-tracker-onboarding-${Stage}
+      Handler: dist/handlers/onboarding.handler
+      CodeUri: .
+      Description: Onboarding endpoint for creating multiple athletes from registration flow
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TournamentsTable
+      Events:
+        CreateOnboardingAthletes:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /onboarding/athletes
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/onboarding.ts
+        External:
+          - '@aws-sdk/*'
+
+  AdminGymSubmissionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub bjj-tournament-tracker-admin-gym-submissions-${Stage}
+      Handler: dist/handlers/adminGymSubmissions.handler
+      CodeUri: .
+      Description: Admin endpoints for gym submission review (approve/reject custom gyms)
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TournamentsTable
+      Events:
+        ListGymSubmissions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /admin/gym-submissions
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        ApproveGymSubmission:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /admin/gym-submissions/{id}/approve
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        RejectGymSubmission:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TournamentsApi
+            Path: /admin/gym-submissions/{id}/reject
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: true
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - src/handlers/adminGymSubmissions.ts
+        External:
+          - '@aws-sdk/*'
+
   FlightPricesFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -1088,6 +1164,14 @@ Outputs:
   AdminMatchesFunctionArn:
     Description: Admin Matches Lambda Function ARN
     Value: !GetAtt AdminMatchesFunction.Arn
+
+  OnboardingFunctionArn:
+    Description: Onboarding Lambda Function ARN
+    Value: !GetAtt OnboardingFunction.Arn
+
+  AdminGymSubmissionsFunctionArn:
+    Description: Admin Gym Submissions Lambda Function ARN
+    Value: !GetAtt AdminGymSubmissionsFunction.Arn
 
   AlertsTopicArn:
     Description: SNS Topic ARN for Lambda error alerts

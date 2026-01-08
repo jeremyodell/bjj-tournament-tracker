@@ -8,7 +8,7 @@ export interface CreateAthleteInput {
   name: string;
   beltRank?: string;
   birthYear?: number;
-  gender?: string;
+  gender?: 'Male' | 'Female';
   weight?: number;
   gymName?: string;
   homeAirport?: string;
@@ -43,6 +43,7 @@ export async function createAthlete(
     SK: buildAthleteSK(athleteId),
     athleteId,
     name: input.name,
+    gender: (input.gender as 'Male' | 'Female') || null,
     beltRank: input.beltRank || null,
     birthYear: input.birthYear || null,
     weightClass: input.weight ? `${input.weight}lbs` : null,
@@ -85,6 +86,9 @@ export async function updateAthlete(
   const updated: AthleteItem = {
     ...existing,
     name: input.name ?? existing.name,
+    gender: input.gender !== undefined
+      ? ((input.gender as 'Male' | 'Female') || null)
+      : existing.gender,
     beltRank: input.beltRank ?? existing.beltRank,
     birthYear: input.birthYear ?? existing.birthYear,
     weightClass: input.weight ? `${input.weight}lbs` : existing.weightClass,

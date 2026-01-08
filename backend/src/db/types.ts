@@ -47,6 +47,9 @@ export const buildMasterGymPK = (id: string): string =>
 export const buildPendingMatchPK = (id: string): string =>
   `PENDINGMATCH#${id}`;
 
+export const buildGymSubmissionPK = (id: string): string =>
+  `GYMSUB#${id}`;
+
 // Entity types
 export interface TournamentItem {
   PK: string; // TOURN#<org>#<externalId>
@@ -93,6 +96,7 @@ export interface AthleteItem {
   SK: string; // ATHLETE#<ulid>
   athleteId: string;
   name: string;
+  gender: 'Male' | 'Female' | null;
   beltRank: string | null;
   birthYear: number | null;
   weightClass: string | null;
@@ -267,6 +271,24 @@ export interface PendingMatchItem {
   updatedAt: string;
 }
 
+// Gym submission from onboarding (for "Other" gym option)
+export interface GymSubmissionItem {
+  PK: string; // GYMSUB#{uuid}
+  SK: 'META';
+  GSI1PK: 'GYMSUBMISSIONS';
+  GSI1SK: string; // {status}#{createdAt} for filtering by status
+  id: string;
+  customGymName: string;
+  submittedByUserId: string; // Cognito sub
+  athleteIds: string[]; // Athlete IDs that selected this custom gym
+  status: 'pending' | 'approved' | 'rejected';
+  masterGymId: string | null; // Set when approved and linked to a master gym
+  reviewedAt: string | null;
+  reviewedBy: string | null; // Cognito sub of admin who reviewed
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type DynamoDBItem =
   | TournamentItem
   | UserProfileItem
@@ -280,4 +302,5 @@ export type DynamoDBItem =
   | TournamentGymRosterItem
   | GymSyncMetaItem
   | MasterGymItem
-  | PendingMatchItem;
+  | PendingMatchItem
+  | GymSubmissionItem;

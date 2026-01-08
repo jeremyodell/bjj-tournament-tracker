@@ -7,7 +7,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-black relative flex items-center justify-center">
+    <div className="min-h-screen relative flex items-center justify-center">
       <BeltWeaveBackground />
       <div className="relative z-10 w-full max-w-md px-4">
         {children}

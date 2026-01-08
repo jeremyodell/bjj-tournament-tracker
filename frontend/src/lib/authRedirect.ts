@@ -28,8 +28,8 @@ export async function getPostLoginRedirect(
     const athletes = data.athletes;
 
     if (athletes.length === 0) {
-      // No athletes - go to plan setup
-      return { path: '/plan' };
+      // No athletes - go to onboarding
+      return { path: '/onboarding' };
     } else if (athletes.length === 1) {
       // Single athlete - auto-select and go to wishlist
       return { path: '/wishlist', athlete: athletes[0] };
@@ -38,7 +38,7 @@ export async function getPostLoginRedirect(
       return { path: '/plan/select' };
     }
   } catch {
-    // On error, fall back to plan
-    return { path: '/plan' };
+    // On error, fall back to onboarding (safest default for new users)
+    return { path: '/onboarding' };
   }
 }

@@ -87,6 +87,7 @@ function createMockAthlete(overrides: Partial<AthleteItem> = {}): AthleteItem {
     SK: 'ATHLETE#test-athlete-id',
     athleteId: 'test-athlete-id',
     name: 'Test Athlete',
+    gender: null,
     beltRank: 'blue',
     birthYear: 2015,
     weightClass: '50lbs',

@@ -122,6 +122,19 @@ GOOGLE_MAPS_API_KEY=xxxxx
 ./dev.sh logs frontend  # Tail frontend logs
 ```
 
+### Git Workflow
+```bash
+./git.sh pull                         # Pull latest changes
+./git.sh test                         # Run all tests (frontend + backend)
+./git.sh commit "message"             # Test + build + commit
+./git.sh commit                       # Test + build + commit (opens editor)
+./git.sh push                         # Push to remote
+./git.sh sync "message"               # Pull → test → commit → push
+./git.sh status                       # Show git status + recent commits
+```
+
+**Note:** The `commit` and `sync` commands automatically enforce pre-commit requirements (tests + build).
+
 ### Frontend
 ```bash
 cd frontend
@@ -295,3 +308,55 @@ Athletes can be linked to a `MasterGym` via the `masterGymId` field, allowing cr
 3. **Cognito for auth:** Managed user pools, JWT tokens for API auth
 4. **App Router:** Next.js 15 with route groups for auth/protected pages
 5. **Gym unification:** Fuzzy matching to unify gyms across orgs with admin review for edge cases
+
+## UI/UX Standards (CRITICAL)
+
+### Form Input Contrast
+**ALWAYS ensure proper contrast on ALL form inputs - never use white text on white background:**
+
+```tsx
+// ✅ CORRECT - Visible contrast (example with white bg and dark text)
+<input
+  type="text"
+  className="w-full px-3 py-2 border rounded-md bg-white text-gray-900 border-gray-300"
+/>
+
+// ✅ ALSO CORRECT - Dark theme with proper contrast
+<input
+  type="text"
+  className="w-full px-3 py-2 border rounded-md bg-gray-800 text-white border-gray-600"
+/>
+
+// ❌ WRONG - No explicit colors = potential white on white
+<input
+  type="text"
+  className="w-full px-3 py-2 border rounded-md border-gray-300"
+/>
+```
+
+**Key Rule:** Always specify BOTH background AND text colors on inputs/selects to ensure readability. The specific colors can vary based on design needs, just ensure they contrast.
+
+### Date Inputs
+**ALWAYS use native HTML5 date pickers:**
+
+```tsx
+// ✅ CORRECT - type="date" provides native date picker
+<input
+  type="date"
+  value={dateValue}
+  onChange={(e) => handleChange(e.target.value)}
+  className="w-full px-3 py-2 border rounded-md bg-white text-gray-900 border-gray-300"
+/>
+
+// ❌ WRONG - type="text" forces manual entry
+<input
+  type="text"
+  placeholder="YYYY-MM-DD"
+  className="..."
+/>
+```
+
+### Dropdown Requirements
+1. **Always include a placeholder option:** `<option value="">Select option</option>`
+2. **Ensure readable contrast:** Specify both background and text colors
+3. **Options inherit:** No need to style individual `<option>` elements

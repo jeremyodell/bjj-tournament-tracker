@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subagent Token Analysis - Static Diagrams</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #fff;
+      padding: 40px;
+    }
+
+    .diagram {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-radius: 24px;
+      padding: 40px;
+      margin-bottom: 40px;
+      border: 1px solid rgba(255,255,255,0.1);
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .diagram-title {
+      font-size: 24px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 30px;
+      background: linear-gradient(135deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ========== DIAGRAM 1: Side by Side Comparison ========== */
+    .comparison-container {
+      display: flex;
+      gap: 40px;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .scenario {
+      flex: 1;
+      max-width: 350px;
+    }
+
+    .scenario-header {
+      text-align: center;
+      padding: 10px 24px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+
+    .scenario-header.good {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.1));
+      color: #22c55e;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .scenario-header.bad {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.1));
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .orchestrator-box {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      text-align: center;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+    }
+
+    .agents-container {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .agent-box {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      border-radius: 14px;
+      padding: 14px 12px;
+      text-align: center;
+      min-width: 100px;
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+    }
+
+    .agent-box.green {
+      background: linear-gradient(135deg, #10b981, #059669);
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+
+    .agent-box.purple {
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+    }
+
+    .agent-label {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .agent-task {
+      font-size: 10px;
+      opacity: 0.8;
+      margin-bottom: 8px;
+    }
+
+    .agent-tokens {
+      background: rgba(0,0,0,0.3);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-family: 'Monaco', monospace;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .nested-box {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      border-radius: 8px;
+      padding: 8px;
+      margin-top: 10px;
+      box-shadow: 0 2px 10px rgba(239, 68, 68, 0.4);
+    }
+
+    .nested-label {
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .nested-tokens {
+      font-size: 11px;
+      font-family: 'Monaco', monospace;
+      margin-top: 4px;
+    }
+
+    .total-row {
+      margin-top: 25px;
+      text-align: center;
+      padding: 16px;
+      border-radius: 12px;
+    }
+
+    .total-row.good {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);
+    }
+
+    .total-row.bad {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3);
+    }
+
+    .total-label {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .total-tokens {
+      font-size: 28px;
+      font-weight: 700;
+      font-family: 'Monaco', monospace;
+    }
+
+    .total-cost {
+      font-size: 14px;
+      opacity: 0.9;
+      margin-top: 4px;
+    }
+
+    .vs-divider {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .vs-text {
+      font-size: 14px;
+      color: #64748b;
+    }
+
+    .vs-multiplier {
+      font-size: 36px;
+      font-weight: 700;
+      color: #ef4444;
+      margin-top: 10px;
+    }
+
+    /* ========== DIAGRAM 2: Triangle Accumulation ========== */
+    .chart-container {
+      padding: 20px;
+    }
+
+    .chart {
+      position: relative;
+      height: 250px;
+      border-left: 2px solid #475569;
+      border-bottom: 2px solid #475569;
+      margin: 20px 40px 40px 60px;
+    }
+
+    .y-axis-label {
+      position: absolute;
+      left: -55px;
+      top: 50%;
+      transform: rotate(-90deg) translateX(50%);
+      font-size: 12px;
+      color: #94a3b8;
+      white-space: nowrap;
+    }
+
+    .x-axis-label {
+      text-align: center;
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 10px;
+    }
+
+    .chart-line {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .chart-area {
+      fill: url(#gradient);
+      opacity: 0.3;
+    }
+
+    .chart-path {
+      fill: none;
+      stroke: #f59e0b;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .chart-dot {
+      fill: #f59e0b;
+    }
+
+    .y-tick {
+      position: absolute;
+      left: -45px;
+      font-size: 11px;
+      color: #64748b;
+      transform: translateY(50%);
+    }
+
+    .x-tick {
+      position: absolute;
+      bottom: -25px;
+      font-size: 11px;
+      color: #64748b;
+      transform: translateX(-50%);
+    }
+
+    .chart-annotation {
+      position: absolute;
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 11px;
+      color: #fca5a5;
+    }
+
+    /* ========== DIAGRAM 3: Cost Comparison Table ========== */
+    .cost-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .cost-table th {
+      text-align: left;
+      padding: 16px;
+      font-weight: 600;
+      font-size: 13px;
+      color: #94a3b8;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .cost-table td {
+      padding: 16px;
+      font-size: 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .cost-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .approach-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .status-icon.good {
+      background: rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+    }
+
+    .status-icon.bad {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+
+    .tokens-cell {
+      font-family: 'Monaco', monospace;
+      font-weight: 600;
+    }
+
+    .cost-cell {
+      font-family: 'Monaco', monospace;
+    }
+
+    .efficiency-bar {
+      height: 8px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      width: 100px;
+    }
+
+    .efficiency-fill {
+      height: 100%;
+      border-radius: 4px;
+    }
+
+    .efficiency-fill.high { background: linear-gradient(90deg, #22c55e, #16a34a); }
+    .efficiency-fill.medium { background: linear-gradient(90deg, #f59e0b, #d97706); }
+    .efficiency-fill.low { background: linear-gradient(90deg, #ef4444, #dc2626); }
+
+    /* ========== Legend ========== */
+    .legend {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      margin-top: 30px;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .legend-swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+    }
+
+    .legend-swatch.task { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    .legend-swatch.nested { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    .legend-swatch.orchestrator { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+
+    /* Page break for printing/screenshotting individual diagrams */
+    .page-break {
+      page-break-after: always;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- DIAGRAM 1: Side by Side Comparison -->
+  <div class="diagram">
+    <div class="diagram-title">The Nesting Problem: Expected vs Actual</div>
+
+    <div class="comparison-container">
+      <!-- Expected -->
+      <div class="scenario">
+        <div class="scenario-header good">Expected (3 Agents)</div>
+        <div class="orchestrator-box">ORCHESTRATOR</div>
+        <div class="agents-container">
+          <div class="agent-box">
+            <div class="agent-label">Agent 1</div>
+            <div class="agent-task">ODE-44</div>
+            <div class="agent-tokens">500k</div>
+          </div>
+          <div class="agent-box green">
+            <div class="agent-label">Agent 2</div>
+            <div class="agent-task">ODE-45</div>
+            <div class="agent-tokens">500k</div>
+          </div>
+          <div class="agent-box purple">
+            <div class="agent-label">Agent 3</div>
+            <div class="agent-task">ODE-46</div>
+            <div class="agent-tokens">500k</div>
+          </div>
+        </div>
+        <div class="total-row good">
+          <div class="total-label">Total</div>
+          <div class="total-tokens">1.5M</div>
+          <div class="total-cost">~$5-8</div>
+        </div>
+      </div>
+
+      <!-- VS Divider -->
+      <div class="vs-divider">
+        <div class="vs-text">vs</div>
+        <div class="vs-multiplier">2.7x</div>
+      </div>
+
+      <!-- Actual -->
+      <div class="scenario">
+        <div class="scenario-header bad">Actual (6 Nested Agents)</div>
+        <div class="orchestrator-box">ORCHESTRATOR</div>
+        <div class="agents-container">
+          <div class="agent-box">
+            <div class="agent-label">Agent 1</div>
+            <div class="agent-task">ODE-44</div>
+            <div class="agent-tokens">700k</div>
+            <div class="nested-box">
+              <div class="nested-label">CodeReview</div>
+              <div class="nested-tokens">+500k</div>
+            </div>
+          </div>
+          <div class="agent-box green">
+            <div class="agent-label">Agent 2</div>
+            <div class="agent-task">ODE-45</div>
+            <div class="agent-tokens">700k</div>
+            <div class="nested-box">
+              <div class="nested-label">CodeReview</div>
+              <div class="nested-tokens">+500k</div>
+            </div>
+          </div>
+          <div class="agent-box purple">
+            <div class="agent-label">Agent 3</div>
+            <div class="agent-task">ODE-46</div>
+            <div class="agent-tokens">700k</div>
+            <div class="nested-box">
+              <div class="nested-label">CodeReview</div>
+              <div class="nested-tokens">+500k</div>
+            </div>
+          </div>
+        </div>
+        <div class="total-row bad">
+          <div class="total-label">Total</div>
+          <div class="total-tokens">4M</div>
+          <div class="total-cost">~$15-20</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-swatch orchestrator"></div>
+        <span>Orchestrator</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch task"></div>
+        <span>Task Agent</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch nested"></div>
+        <span>Nested Agent (problem!)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIAGRAM 2: Token Accumulation Chart -->
+  <div class="diagram">
+    <div class="diagram-title">Token Accumulation: The Triangle Problem</div>
+
+    <div class="chart-container">
+      <div class="chart">
+        <div class="y-axis-label">Context Size (k tokens)</div>
+
+        <svg class="chart-line" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:0.4" />
+              <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:0" />
+            </linearGradient>
+          </defs>
+          <!-- Area fill -->
+          <path class="chart-area" d="M 0,68 L 10,64 20,60 30,54 40,48 50,42 60,36 70,28 80,20 90,12 100,8 100,100 0,100 Z" />
+          <!-- Line -->
+          <path class="chart-path" d="M 0,68 L 10,64 20,60 30,54 40,48 50,42 60,36 70,28 80,20 90,12 100,8" />
+          <!-- Dots -->
+          <circle class="chart-dot" cx="0" cy="68" r="1.5" />
+          <circle class="chart-dot" cx="20" cy="60" r="1.5" />
+          <circle class="chart-dot" cx="40" cy="48" r="1.5" />
+          <circle class="chart-dot" cx="60" cy="36" r="1.5" />
+          <circle class="chart-dot" cx="80" cy="20" r="1.5" />
+          <circle class="chart-dot" cx="100" cy="8" r="1.5" />
+        </svg>
+
+        <!-- Y-axis ticks -->
+        <div class="y-tick" style="bottom: 68%">80k</div>
+        <div class="y-tick" style="bottom: 48%">120k</div>
+        <div class="y-tick" style="bottom: 28%">160k</div>
+        <div class="y-tick" style="bottom: 8%">200k</div>
+
+        <!-- X-axis ticks -->
+        <div class="x-tick" style="left: 0%">1</div>
+        <div class="x-tick" style="left: 20%">6</div>
+        <div class="x-tick" style="left: 40%">12</div>
+        <div class="x-tick" style="left: 60%">18</div>
+        <div class="x-tick" style="left: 80%">24</div>
+        <div class="x-tick" style="left: 100%">30</div>
+
+        <!-- Annotation -->
+        <div class="chart-annotation" style="right: 10px; top: 20px;">
+          Every tool call<br>includes ALL<br>previous context
+        </div>
+      </div>
+      <div class="x-axis-label">Tool Call Number</div>
+    </div>
+
+    <div style="text-align: center; margin-top: 20px; padding: 16px; background: rgba(239, 68, 68, 0.1); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2);">
+      <div style="font-size: 14px; color: #fca5a5; margin-bottom: 8px;">Triangle Formula</div>
+      <div style="font-family: Monaco, monospace; font-size: 18px; color: #fff;">
+        (80k + 230k) × 30 ÷ 2 = <span style="color: #ef4444; font-weight: 700;">4.6M tokens</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIAGRAM 3: Cost Comparison Table -->
+  <div class="diagram">
+    <div class="diagram-title">Cost Comparison: Know Your Options</div>
+
+    <table class="cost-table">
+      <thead>
+        <tr>
+          <th>Approach</th>
+          <th>Tokens</th>
+          <th>Cost (Sonnet)</th>
+          <th>Efficiency</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <div class="approach-cell">
+              <div class="status-icon good">✓</div>
+              <span>Optimal (smart routing)</span>
+            </div>
+          </td>
+          <td class="tokens-cell">~500k</td>
+          <td class="cost-cell">~$2-3</td>
+          <td>
+            <div class="efficiency-bar">
+              <div class="efficiency-fill high" style="width: 100%"></div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div class="approach-cell">
+              <div class="status-icon good">✓</div>
+              <span>Sequential, no workflow</span>
+            </div>
+          </td>
+          <td class="tokens-cell">~1.5M</td>
+          <td class="cost-cell">~$5-8</td>
+          <td>
+            <div class="efficiency-bar">
+              <div class="efficiency-fill medium" style="width: 33%"></div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <div class="approach-cell">
+              <div class="status-icon good">✓</div>
+              <span>Parallel, no nesting</span>
+            </div>
+          </td>
+          <td class="tokens-cell">~1.5M</td>
+          <td class="cost-cell">~$5-8</td>
+          <td>
+            <div class="efficiency-bar">
+              <div class="efficiency-fill medium" style="width: 33%"></div>
+            </div>
+          </td>
+        </tr>
+        <tr style="background: rgba(239, 68, 68, 0.1);">
+          <td>
+            <div class="approach-cell">
+              <div class="status-icon bad">✗</div>
+              <span style="color: #fca5a5; font-weight: 600;">Parallel + nested agents</span>
+            </div>
+          </td>
+          <td class="tokens-cell" style="color: #ef4444;">~4M</td>
+          <td class="cost-cell" style="color: #ef4444;">~$15-20</td>
+          <td>
+            <div class="efficiency-bar">
+              <div class="efficiency-fill low" style="width: 12%"></div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="text-align: center; margin-top: 30px; font-size: 18px;">
+      <span style="color: #94a3b8;">Overhead: </span>
+      <span style="color: #ef4444; font-weight: 700; font-size: 24px;">8x</span>
+      <span style="color: #94a3b8;"> more tokens than necessary</span>
+    </div>
+  </div>
+
+</body>
+</html>

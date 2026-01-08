@@ -39,7 +39,8 @@ export default function LoginPage() {
       // Get access token for redirect logic
       const token = await getAccessToken();
       if (!token) {
-        router.push('/plan');
+        // Fallback: redirect to onboarding for new users
+        router.push('/onboarding');
         return;
       }
 

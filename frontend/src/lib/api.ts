@@ -74,6 +74,7 @@ export async function removeFromWishlist(accessToken: string, tournamentId: stri
 export interface Athlete {
   athleteId: string;
   name: string;
+  gender: 'Male' | 'Female' | null;
   beltRank: string | null;
   birthYear: number | null;
   weightClass: string | null;
@@ -227,6 +228,105 @@ export async function rejectMatch(
 ): Promise<{ message: string }> {
   const response = await api.post(
     `/admin/pending-matches/${matchId}/reject`,
+    {},
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  return response.data;
+}
+
+// Master Gym types and API functions
+export interface MasterGym {
+  id: string;
+  canonicalName: string;
+  city: string | null;
+  country: string | null;
+  address: string | null;
+  website: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function searchMasterGyms(query: string): Promise<MasterGym[]> {
+  const response = await api.get(`/master-gyms/search?q=${encodeURIComponent(query)}`);
+  return response.data.gyms || [];
+}
+
+// Onboarding types and API functions
+export interface OnboardingAthleteData {
+  name: string;
+  birthdate: string; // YYYY-MM-DD format
+  gender: 'Male' | 'Female';
+  beltRank: string;
+  weight: number;
+  masterGymId?: string;
+  customGymName?: string;
+}
+
+export interface OnboardingData {
+  role: 'athlete' | 'parent';
+  athletes: OnboardingAthleteData[];
+}
+
+export interface OnboardingResult {
+  athletes: Athlete[];
+  gymSubmissionIds: string[];
+}
+
+export async function createOnboardingAthletes(
+  accessToken: string,
+  data: OnboardingData
+): Promise<OnboardingResult> {
+  const response = await api.post(
+    '/onboarding/athletes',
+    data,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  return response.data;
+}
+
+// Gym Submission types and API functions
+export interface GymSubmission {
+  id: string;
+  customGymName: string;
+  submittedByUserId: string;
+  athleteIds: string[];
+  status: 'pending' | 'approved' | 'rejected';
+  masterGymId: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+}
+
+export async function fetchGymSubmissions(
+  accessToken: string,
+  status: 'pending' | 'approved' | 'rejected' = 'pending'
+): Promise<{ submissions: GymSubmission[] }> {
+  const response = await api.get(`/admin/gym-submissions?status=${status}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  return response.data;
+}
+
+export async function approveGymSubmission(
+  accessToken: string,
+  submissionId: string,
+  createNew: boolean,
+  masterGymId?: string
+): Promise<{ masterGymId: string; message: string }> {
+  const response = await api.post(
+    `/admin/gym-submissions/${submissionId}/approve`,
+    { createNew, masterGymId },
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  return response.data;
+}
+
+export async function rejectGymSubmission(
+  accessToken: string,
+  submissionId: string
+): Promise<{ message: string }> {
+  const response = await api.post(
+    `/admin/gym-submissions/${submissionId}/reject`,
     {},
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );

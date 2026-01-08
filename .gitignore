@@ -45,3 +45,10 @@ backend/scripts/create-table-fetch.ts
 
 # SAM build artifacts
 backend/.aws-sam/
+
+# Runtime PID files
+.backend.pid
+.frontend.pid
+
+# Temp files
+response.json

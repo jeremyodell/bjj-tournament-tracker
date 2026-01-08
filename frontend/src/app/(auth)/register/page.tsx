@@ -43,8 +43,20 @@ export default function RegisterPage() {
     }
 
     try {
+      // Check if we're in dev mode
+      const isDevMode = process.env.NEXT_PUBLIC_DEV_MODE === 'true';
+
       await register(email, password);
-      router.push(`/confirm?email=${encodeURIComponent(email)}`);
+
+      if (isDevMode) {
+        // In dev mode, auto-login and redirect to onboarding
+        const { login } = useAuthStore.getState();
+        await login(email, password);
+        router.push('/onboarding');
+      } else {
+        // In production, redirect to confirmation page
+        router.push(`/confirm?email=${encodeURIComponent(email)}`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     }
