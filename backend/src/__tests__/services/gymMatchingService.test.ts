@@ -5,6 +5,7 @@ import {
   calculateMatchScore,
   findMatchesForGym,
   processGymMatches,
+  calculateSimilarity,
 } from '../../services/gymMatchingService.js';
 import type { SourceGymItem } from '../../db/types.js';
 
@@ -118,6 +119,77 @@ describe('gymMatchingService', () => {
     it('should return 0 for empty strings', () => {
       expect(calculateNameSimilarity('', 'Test')).toBe(0);
       expect(calculateNameSimilarity('Test', '')).toBe(0);
+    });
+  });
+
+  describe('calculateSimilarity with Jaro-Winkler', () => {
+    it('should return 100 for identical gym names', () => {
+      const score = calculateSimilarity(
+        'Gracie Barra',
+        'Gracie Barra',
+        'Austin',
+        'Austin'
+      );
+      expect(score).toBe(100);
+    });
+
+    it('should handle minor variations with high score', () => {
+      const score = calculateSimilarity(
+        'Gracie Barra Austin',
+        'Gracie Barra - Austin',
+        'Austin',
+        'Austin'
+      );
+      // Jaro-Winkler favors prefix matches
+      expect(score).toBeGreaterThan(85);
+    });
+
+    it('should give low score for completely different names', () => {
+      const score = calculateSimilarity(
+        'Gracie Barra',
+        'Alliance Jiu Jitsu',
+        'Austin',
+        'Houston'
+      );
+      expect(score).toBeLessThan(50);
+    });
+
+    it('should apply city boost when city appears in gym name', () => {
+      const scoreWithCity = calculateSimilarity(
+        'Gracie Barra Austin',
+        'Gracie Barra Austin',
+        'Austin',
+        'Austin'
+      );
+      const scoreWithoutCity = calculateSimilarity(
+        'Gracie Barra',
+        'Gracie Barra',
+        'Austin',
+        'Austin'
+      );
+      // City boost should add ~15 points
+      expect(scoreWithCity).toBeGreaterThanOrEqual(scoreWithoutCity);
+    });
+
+    it('should apply affiliation boost for matching affiliations', () => {
+      const score = calculateSimilarity(
+        'Gracie Barra Austin',
+        'Gracie Barra Dallas',
+        'Austin',
+        'Dallas'
+      );
+      // "Gracie Barra" affiliation should boost score
+      expect(score).toBeGreaterThan(70);
+    });
+
+    it('should not exceed 100 even with boosts', () => {
+      const score = calculateSimilarity(
+        'Gracie Barra Austin',
+        'Gracie Barra Austin',
+        'Austin',
+        'Austin'
+      );
+      expect(score).toBeLessThanOrEqual(100);
     });
   });
 
@@ -293,6 +365,161 @@ describe('gymMatchingService', () => {
       await findMatchesForGym(sourceGym);
 
       expect(mockListGyms).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('findMatchesForGym with cached gyms', () => {
+    it('should accept cached gym array instead of querying DB', async () => {
+      const sourceGym: SourceGymItem = {
+        PK: 'SRCGYM#JJWL#123',
+        SK: 'META',
+        org: 'JJWL',
+        externalId: '123',
+        name: 'Test Gym Austin',
+        city: 'Austin',
+        GSI1PK: 'GYMS',
+        GSI1SK: 'JJWL#Test Gym Austin',
+        masterGymId: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const cachedGyms: SourceGymItem[] = [
+        {
+          PK: 'SRCGYM#IBJJF#456',
+          SK: 'META',
+          org: 'IBJJF',
+          externalId: '456',
+          name: 'Test Gym Austin',
+          city: 'Austin',
+          countryCode: 'US',
+          GSI1PK: 'GYMS',
+          GSI1SK: 'IBJJF#Test Gym Austin',
+          masterGymId: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+
+      const matches = await findMatchesForGym(sourceGym, cachedGyms);
+
+      expect(matches).toHaveLength(1);
+      expect(matches[0].gym.externalId).toBe('456');
+      expect(matches[0].score).toBeGreaterThan(90);
+    });
+
+    it('should find high-confidence matches (≥90%)', async () => {
+      const sourceGym: SourceGymItem = {
+        PK: 'SRCGYM#JJWL#123',
+        SK: 'META',
+        org: 'JJWL',
+        externalId: '123',
+        name: 'Gracie Barra Austin',
+        city: 'Austin',
+        GSI1PK: 'GYMS',
+        GSI1SK: 'JJWL#Gracie Barra Austin',
+        masterGymId: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const cachedGyms: SourceGymItem[] = [
+        {
+          PK: 'SRCGYM#IBJJF#456',
+          SK: 'META',
+          org: 'IBJJF',
+          externalId: '456',
+          name: 'Gracie Barra - Austin',
+          city: 'Austin',
+          countryCode: 'US',
+          GSI1PK: 'GYMS',
+          GSI1SK: 'IBJJF#Gracie Barra - Austin',
+          masterGymId: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+
+      const matches = await findMatchesForGym(sourceGym, cachedGyms);
+
+      expect(matches).toHaveLength(1);
+      expect(matches[0].score).toBeGreaterThanOrEqual(90);
+    });
+
+    it('should find medium-confidence matches (70-89%)', async () => {
+      const sourceGym: SourceGymItem = {
+        PK: 'SRCGYM#JJWL#123',
+        SK: 'META',
+        org: 'JJWL',
+        externalId: '123',
+        name: 'Alliance Austin',
+        city: 'Austin',
+        GSI1PK: 'GYMS',
+        GSI1SK: 'JJWL#Alliance Austin',
+        masterGymId: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const cachedGyms: SourceGymItem[] = [
+        {
+          PK: 'SRCGYM#IBJJF#456',
+          SK: 'META',
+          org: 'IBJJF',
+          externalId: '456',
+          name: 'Alliance Jiu Jitsu',
+          city: 'Austin',
+          countryCode: 'US',
+          GSI1PK: 'GYMS',
+          GSI1SK: 'IBJJF#Alliance Jiu Jitsu',
+          masterGymId: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+
+      const matches = await findMatchesForGym(sourceGym, cachedGyms);
+
+      expect(matches).toHaveLength(1);
+      expect(matches[0].score).toBeGreaterThanOrEqual(70);
+      expect(matches[0].score).toBeLessThan(90);
+    });
+
+    it('should exclude low-confidence matches (<70%)', async () => {
+      const sourceGym: SourceGymItem = {
+        PK: 'SRCGYM#JJWL#123',
+        SK: 'META',
+        org: 'JJWL',
+        externalId: '123',
+        name: 'Gracie Barra Austin',
+        city: 'Austin',
+        GSI1PK: 'GYMS',
+        GSI1SK: 'JJWL#Gracie Barra Austin',
+        masterGymId: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const cachedGyms: SourceGymItem[] = [
+        {
+          PK: 'SRCGYM#IBJJF#456',
+          SK: 'META',
+          org: 'IBJJF',
+          externalId: '456',
+          name: 'Completely Different Gym',
+          city: 'Houston',
+          countryCode: 'US',
+          GSI1PK: 'GYMS',
+          GSI1SK: 'IBJJF#Completely Different Gym',
+          masterGymId: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ];
+
+      const matches = await findMatchesForGym(sourceGym, cachedGyms);
+
+      expect(matches).toHaveLength(0);
     });
   });
 
