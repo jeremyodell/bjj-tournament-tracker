@@ -35,11 +35,11 @@ describe('ibjjfGymFetcher', () => {
         id: 12345,
         name: 'Gracie Barra',
         country: 'United States',
-        countryCode: 'US',
+        countryAbbr: 'US',
         city: 'Irvine',
         address: '123 Main St',
-        federation: 'IBJJF',
-        site: 'https://graciebarra.com',
+        federationAbbr: 'IBJJF',
+        website: 'https://graciebarra.com',
         responsible: 'Carlos Gracie Jr',
       };
 
@@ -62,11 +62,11 @@ describe('ibjjfGymFetcher', () => {
         id: 99999,
         name: 'Test',
         country: '',
-        countryCode: '',
+        countryAbbr: '',
         city: '',
         address: '',
-        federation: '',
-        site: '',
+        federationAbbr: '',
+        website: null,
         responsible: '',
       };
 
@@ -81,11 +81,11 @@ describe('ibjjfGymFetcher', () => {
         id: 1,
         name: 'Team #1 BJJ',
         country: '',
-        countryCode: '',
+        countryAbbr: '',
         city: '',
         address: '',
-        federation: '',
-        site: '',
+        federationAbbr: '',
+        website: null,
         responsible: '',
       };
 
@@ -99,11 +99,11 @@ describe('ibjjfGymFetcher', () => {
         id: 1,
         name: 'Test Gym',
         country: '',
-        countryCode: '',
+        countryAbbr: '',
         city: '',
         address: '',
-        federation: '',
-        site: '',
+        federationAbbr: '',
+        website: null,
         responsible: '',
       };
 
@@ -122,12 +122,11 @@ describe('ibjjfGymFetcher', () => {
   describe('parseIBJJFAcademiesResponse', () => {
     it('parses valid response with multiple academies', () => {
       const response = {
-        data: [
-          { id: 1, name: 'Gym A', country: 'US', countryCode: 'US', city: 'NYC', address: '', federation: '', site: '', responsible: '' },
-          { id: 2, name: 'Gym B', country: 'BR', countryCode: 'BR', city: 'Rio', address: '', federation: '', site: '', responsible: '' },
+        pagination: { totalRecords: 100 },
+        list: [
+          { id: 1, name: 'Gym A', country: 'US', countryAbbr: 'US', city: 'NYC', address: '', federationAbbr: '', website: null, responsible: '' },
+          { id: 2, name: 'Gym B', country: 'BR', countryAbbr: 'BR', city: 'Rio', address: '', federationAbbr: '', website: null, responsible: '' },
         ],
-        totalRecords: 100,
-        filteredRecords: 2,
       };
 
       const result = parseIBJJFAcademiesResponse(response);
@@ -140,12 +139,11 @@ describe('ibjjfGymFetcher', () => {
 
     it('filters entries with missing id', () => {
       const response = {
-        data: [
-          { id: 1, name: 'Valid Gym', country: '', countryCode: '', city: '', address: '', federation: '', site: '', responsible: '' },
-          { name: 'No ID Gym', country: '', countryCode: '', city: '', address: '', federation: '', site: '', responsible: '' },
+        pagination: { totalRecords: 2 },
+        list: [
+          { id: 1, name: 'Valid Gym', country: '', countryAbbr: '', city: '', address: '', federationAbbr: '', website: null, responsible: '' },
+          { name: 'No ID Gym', country: '', countryAbbr: '', city: '', address: '', federationAbbr: '', website: null, responsible: '' },
         ],
-        totalRecords: 2,
-        filteredRecords: 2,
       };
 
       const result = parseIBJJFAcademiesResponse(response);
@@ -156,12 +154,11 @@ describe('ibjjfGymFetcher', () => {
 
     it('filters entries with missing name', () => {
       const response = {
-        data: [
-          { id: 1, name: 'Valid Gym', country: '', countryCode: '', city: '', address: '', federation: '', site: '', responsible: '' },
-          { id: 2, country: '', countryCode: '', city: '', address: '', federation: '', site: '', responsible: '' },
+        pagination: { totalRecords: 2 },
+        list: [
+          { id: 1, name: 'Valid Gym', country: '', countryAbbr: '', city: '', address: '', federationAbbr: '', website: null, responsible: '' },
+          { id: 2, country: '', countryAbbr: '', city: '', address: '', federationAbbr: '', website: null, responsible: '' },
         ],
-        totalRecords: 2,
-        filteredRecords: 2,
       };
 
       const result = parseIBJJFAcademiesResponse(response);
@@ -172,12 +169,11 @@ describe('ibjjfGymFetcher', () => {
 
     it('filters entries with empty name', () => {
       const response = {
-        data: [
-          { id: 1, name: 'Valid Gym', country: '', countryCode: '', city: '', address: '', federation: '', site: '', responsible: '' },
-          { id: 2, name: '', country: '', countryCode: '', city: '', address: '', federation: '', site: '', responsible: '' },
+        pagination: { totalRecords: 2 },
+        list: [
+          { id: 1, name: 'Valid Gym', country: '', countryAbbr: '', city: '', address: '', federationAbbr: '', website: null, responsible: '' },
+          { id: 2, name: '', country: '', countryAbbr: '', city: '', address: '', federationAbbr: '', website: null, responsible: '' },
         ],
-        totalRecords: 2,
-        filteredRecords: 2,
       };
 
       const result = parseIBJJFAcademiesResponse(response);
@@ -187,12 +183,11 @@ describe('ibjjfGymFetcher', () => {
 
     it('filters entries with whitespace-only name', () => {
       const response = {
-        data: [
-          { id: 1, name: 'Valid Gym', country: '', countryCode: '', city: '', address: '', federation: '', site: '', responsible: '' },
-          { id: 2, name: '   ', country: '', countryCode: '', city: '', address: '', federation: '', site: '', responsible: '' },
+        pagination: { totalRecords: 2 },
+        list: [
+          { id: 1, name: 'Valid Gym', country: '', countryAbbr: '', city: '', address: '', federationAbbr: '', website: null, responsible: '' },
+          { id: 2, name: '   ', country: '', countryAbbr: '', city: '', address: '', federationAbbr: '', website: null, responsible: '' },
         ],
-        totalRecords: 2,
-        filteredRecords: 2,
       };
 
       const result = parseIBJJFAcademiesResponse(response);
@@ -214,27 +209,26 @@ describe('ibjjfGymFetcher', () => {
       expect(result.totalRecords).toBe(0);
     });
 
-    it('returns empty array for missing data field', () => {
-      const result = parseIBJJFAcademiesResponse({ totalRecords: 10 });
+    it('returns empty array for missing pagination field', () => {
+      const result = parseIBJJFAcademiesResponse({ list: [] });
 
       expect(result.gyms).toHaveLength(0);
       expect(result.totalRecords).toBe(0);
     });
 
-    it('returns empty array when data is not an array', () => {
-      const result = parseIBJJFAcademiesResponse({ data: 'not array', totalRecords: 10 });
+    it('returns empty array when list is not an array', () => {
+      const result = parseIBJJFAcademiesResponse({ pagination: { totalRecords: 10 }, list: 'not array' });
 
       expect(result.gyms).toHaveLength(0);
-      expect(result.totalRecords).toBe(0);
+      expect(result.totalRecords).toBe(10);
     });
 
     it('extracts totalRecords correctly', () => {
       const response = {
-        data: [
-          { id: 1, name: 'Gym', country: '', countryCode: '', city: '', address: '', federation: '', site: '', responsible: '' },
+        pagination: { totalRecords: 8574 },
+        list: [
+          { id: 1, name: 'Gym', country: '', countryAbbr: '', city: '', address: '', federationAbbr: '', website: null, responsible: '' },
         ],
-        totalRecords: 8574,
-        filteredRecords: 1,
       };
 
       const result = parseIBJJFAcademiesResponse(response);

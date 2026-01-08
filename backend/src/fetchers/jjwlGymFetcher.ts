@@ -16,14 +16,22 @@ export function mapJJWLGymToNormalized(gym: JJWLGym): NormalizedGym {
 
 /**
  * Parse and validate JJWL gyms response
+ * Response format: { status: true, length: 5783, data: [...] }
  */
 export function parseJJWLGymsResponse(data: unknown): NormalizedGym[] {
-  if (!Array.isArray(data)) {
-    console.warn('[JJWLGymFetcher] Response is not an array');
+  if (!data || typeof data !== 'object') {
+    console.warn('[JJWLGymFetcher] Response is not an object');
     return [];
   }
 
-  return data
+  const response = data as Record<string, unknown>;
+
+  if (!Array.isArray(response.data)) {
+    console.warn('[JJWLGymFetcher] Response.data is not an array');
+    return [];
+  }
+
+  return response.data
     .filter((item): item is JJWLGym => {
       if (!item || typeof item !== 'object') return false;
       const gym = item as Record<string, unknown>;

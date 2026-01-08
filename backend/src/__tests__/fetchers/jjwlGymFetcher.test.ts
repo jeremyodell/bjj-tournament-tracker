@@ -28,10 +28,14 @@ describe('jjwlGymFetcher', () => {
 
   describe('parseJJWLGymsResponse', () => {
     it('parses valid JSON array', () => {
-      const response = [
-        { id: '1', name: 'Gym A' },
-        { id: '2', name: 'Gym B' },
-      ];
+      const response = {
+        status: true,
+        length: 2,
+        data: [
+          { id: '1', name: 'Gym A' },
+          { id: '2', name: 'Gym B' },
+        ],
+      };
 
       const result = parseJJWLGymsResponse(response);
 
@@ -41,48 +45,64 @@ describe('jjwlGymFetcher', () => {
     });
 
     it('filters out entries with empty id', () => {
-      const response = [
-        { id: '1', name: 'Valid Gym' },
-        { id: '', name: 'No ID' },
-      ];
+      const response = {
+        status: true,
+        length: 2,
+        data: [
+          { id: '1', name: 'Valid Gym' },
+          { id: '', name: 'No ID' },
+        ],
+      };
 
-      const result = parseJJWLGymsResponse(response as JJWLGym[]);
+      const result = parseJJWLGymsResponse(response);
 
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Valid Gym');
     });
 
     it('filters out entries with empty name', () => {
-      const response = [
-        { id: '1', name: 'Valid Gym' },
-        { id: '3', name: '' },
-      ];
+      const response = {
+        status: true,
+        length: 2,
+        data: [
+          { id: '1', name: 'Valid Gym' },
+          { id: '3', name: '' },
+        ],
+      };
 
-      const result = parseJJWLGymsResponse(response as JJWLGym[]);
+      const result = parseJJWLGymsResponse(response);
 
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Valid Gym');
     });
 
     it('filters out entries with whitespace-only name', () => {
-      const response = [
-        { id: '1', name: 'Valid Gym' },
-        { id: '3', name: '   ' },
-      ];
+      const response = {
+        status: true,
+        length: 2,
+        data: [
+          { id: '1', name: 'Valid Gym' },
+          { id: '3', name: '   ' },
+        ],
+      };
 
-      const result = parseJJWLGymsResponse(response as JJWLGym[]);
+      const result = parseJJWLGymsResponse(response);
 
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Valid Gym');
     });
 
     it('filters out entries with missing id field', () => {
-      const response = [
-        { id: '1', name: 'Valid Gym' },
-        { name: 'Missing ID' },
-      ];
+      const response = {
+        status: true,
+        length: 2,
+        data: [
+          { id: '1', name: 'Valid Gym' },
+          { name: 'Missing ID' },
+        ],
+      };
 
-      const result = parseJJWLGymsResponse(response as JJWLGym[]);
+      const result = parseJJWLGymsResponse(response);
 
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Valid Gym');
@@ -103,7 +123,7 @@ describe('jjwlGymFetcher', () => {
     });
 
     it('handles empty array', () => {
-      const result = parseJJWLGymsResponse([]);
+      const result = parseJJWLGymsResponse({ status: true, length: 0, data: [] });
 
       expect(result).toHaveLength(0);
     });

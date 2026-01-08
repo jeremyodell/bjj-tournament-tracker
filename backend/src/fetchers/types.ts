@@ -74,24 +74,33 @@ export interface JJWLRosterAthlete {
   gender: string;
 }
 
-// IBJJF Academy from API
+// IBJJF Academy from API (v1 endpoint)
 export interface IBJJFAcademy {
   id: number;
   name: string;
   country: string;
-  countryCode: string;
+  countryAbbr: string;
   city: string;
   address: string;
-  federation: string;
-  site: string;
+  federationAbbr: string;
+  website: string | null;
   responsible: string;
 }
 
-// IBJJF API response structure
-export interface IBJJFAcademiesResponse {
-  data: IBJJFAcademy[];
+// IBJJF API v1 pagination structure
+export interface IBJJFPagination {
+  page: number;
+  from: number;
+  to: number;
+  pageSize: number;
+  lastPage: number;
   totalRecords: number;
-  filteredRecords: number;
+}
+
+// IBJJF API v1 response structure
+export interface IBJJFAcademiesResponse {
+  pagination: IBJJFPagination;
+  list: IBJJFAcademy[];
 }
 
 // Extended normalized gym with IBJJF fields

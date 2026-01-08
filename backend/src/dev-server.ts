@@ -23,7 +23,7 @@ const { handler: adminMatchesHandler } = await import('./handlers/adminMatches.j
 const { handler: masterGymsHandler } = await import('./handlers/masterGyms.js');
 const { handler: wishlistHandler } = await import('./handlers/wishlist.js');
 const { handler: athletesHandler } = await import('./handlers/athletes.js');
-const { syncIBJJFGyms } = await import('./services/gymSyncService.js');
+const { syncIBJJFGyms, syncJJWLGyms } = await import('./services/gymSyncService.js');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -168,14 +168,14 @@ app.post('/api/admin/pending-matches/:id/reject', wrapHandler(adminMatchesHandle
 app.post('/api/admin/master-gyms/:id/unlink', wrapHandler(adminMatchesHandler));
 
 // Master gym routes (public)
-app.get('/api/gyms/search', wrapHandler(masterGymsHandler));
+app.get('/api/master-gyms/search', wrapHandler(masterGymsHandler));
 app.get('/api/master-gyms/:id', wrapHandler(masterGymsHandler));
 
-// Gym sync route (manual trigger for local testing)
+// Gym sync routes (manual trigger for local testing)
 app.post('/gym-sync', async (req, res) => {
   try {
     const forceSync = req.query.force === 'true';
-    console.log(`[GymSync] Manual sync triggered (force=${forceSync})`);
+    console.log(`[GymSync] Manual IBJJF sync triggered (force=${forceSync})`);
 
     const result = await syncIBJJFGyms({ forceSync });
 
@@ -194,7 +194,36 @@ app.post('/gym-sync', async (req, res) => {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[GymSync] Sync failed:', message);
+    console.error('[GymSync] IBJJF sync failed:', message);
+    res.status(500).json({
+      success: false,
+      error: message,
+    });
+  }
+});
+
+app.post('/gym-sync/jjwl', async (req, res) => {
+  try {
+    console.log('[GymSync] Manual JJWL sync triggered');
+
+    const result = await syncJJWLGyms();
+
+    if (result.error) {
+      res.status(500).json({
+        success: false,
+        error: result.error,
+        result,
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      result,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[GymSync] JJWL sync failed:', message);
     res.status(500).json({
       success: false,
       error: message,

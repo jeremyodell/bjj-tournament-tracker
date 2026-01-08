@@ -5,7 +5,7 @@ export interface ParsedIBJJFResponse {
   totalRecords: number;
 }
 
-const IBJJF_ACADEMIES_URL = 'https://ibjjf.com/api/academies';
+const IBJJF_ACADEMIES_URL = 'https://ibjjf.com/api/v1/academies/list.json';
 const PAGE_SIZE = 20;
 /** Delay between API requests to avoid rate limiting */
 const RATE_LIMIT_DELAY_MS = 200;
@@ -31,17 +31,17 @@ export function mapIBJJFAcademyToGym(academy: IBJJFAcademy): IBJJFNormalizedGym 
     externalId: String(academy.id),
     name: sanitizeGymName(academy.name),
     country: academy.country || undefined,
-    countryCode: academy.countryCode || undefined,
+    countryCode: academy.countryAbbr || undefined,
     city: academy.city || undefined,
     address: academy.address || undefined,
-    federation: academy.federation || undefined,
-    website: academy.site || undefined,
+    federation: academy.federationAbbr || undefined,
+    website: academy.website || undefined,
     responsible: academy.responsible || undefined,
   };
 }
 
 /**
- * Parse and validate IBJJF academies response
+ * Parse and validate IBJJF academies response (v1 API)
  */
 export function parseIBJJFAcademiesResponse(data: unknown): ParsedIBJJFResponse {
   if (!data || typeof data !== 'object') {
@@ -51,15 +51,23 @@ export function parseIBJJFAcademiesResponse(data: unknown): ParsedIBJJFResponse 
 
   const response = data as Record<string, unknown>;
 
-  if (!Array.isArray(response.data)) {
-    console.warn('[IBJJFGymFetcher] Response.data is not an array');
+  // Check for pagination object
+  if (!response.pagination || typeof response.pagination !== 'object') {
+    console.warn('[IBJJFGymFetcher] Response.pagination is missing or invalid');
     return { gyms: [], totalRecords: 0 };
   }
 
+  const pagination = response.pagination as Record<string, unknown>;
   const totalRecords =
-    typeof response.totalRecords === 'number' ? response.totalRecords : 0;
+    typeof pagination.totalRecords === 'number' ? pagination.totalRecords : 0;
 
-  const gyms = response.data
+  // Check for list array
+  if (!Array.isArray(response.list)) {
+    console.warn('[IBJJFGymFetcher] Response.list is not an array');
+    return { gyms: [], totalRecords };
+  }
+
+  const gyms = response.list
     .filter((item): item is IBJJFAcademy => {
       if (!item || typeof item !== 'object') return false;
       const academy = item as Record<string, unknown>;
@@ -87,15 +95,15 @@ export function parseIBJJFAcademiesResponse(data: unknown): ParsedIBJJFResponse 
 }
 
 /**
- * Fetch a single page of IBJJF academies
+ * Fetch a single page of IBJJF academies (v1 API uses 1-based page numbers)
  */
 export async function fetchIBJJFGymPage(
   page: number
 ): Promise<ParsedIBJJFResponse> {
-  const start = page * PAGE_SIZE;
-  const url = `${IBJJF_ACADEMIES_URL}?start=${start}&length=${PAGE_SIZE}`;
+  const pageNumber = page + 1; // API uses 1-based pages
+  const url = `${IBJJF_ACADEMIES_URL}?page=${pageNumber}`;
 
-  console.log(`[IBJJFGymFetcher] Fetching page ${page} (start=${start})`);
+  console.log(`[IBJJFGymFetcher] Fetching page ${page} (API page=${pageNumber})`);
 
   const response = await fetch(url, {
     headers: IBJJF_API_HEADERS,
@@ -115,7 +123,7 @@ export async function fetchIBJJFGymPage(
  * Fetch total count of IBJJF academies for change detection
  */
 export async function fetchIBJJFGymCount(): Promise<number> {
-  const url = `${IBJJF_ACADEMIES_URL}?start=0&length=1`;
+  const url = `${IBJJF_ACADEMIES_URL}?page=1`;
 
   const response = await fetch(url, {
     headers: IBJJF_API_HEADERS,
