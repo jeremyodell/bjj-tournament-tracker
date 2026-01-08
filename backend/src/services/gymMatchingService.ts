@@ -210,95 +210,111 @@ export function calculateMatchScore(
 }
 
 /**
- * Find potential matches for a gym from the other org
- * Returns matches above 70% threshold
+ * Find matching gyms for a source gym using cached target gyms.
+ * @param sourceGym - The gym to find matches for
+ * @param cachedTargetGyms - Pre-loaded array of target gyms to compare against
+ * @returns Array of matches with scores ≥70%
  */
 export async function findMatchesForGym(
   sourceGym: SourceGymItem,
-  threshold = 70
+  cachedTargetGyms: SourceGymItem[]
 ): Promise<Array<{ gym: SourceGymItem; score: number; signals: MatchSignals }>> {
-  // Determine which org to search (opposite of source)
-  const targetOrg = sourceGym.org === 'JJWL' ? 'IBJJF' : 'JJWL';
-
   const matches: Array<{ gym: SourceGymItem; score: number; signals: MatchSignals }> = [];
 
-  // Paginate through all gyms from target org
-  let lastKey: Record<string, unknown> | undefined;
-  do {
-    const { items, lastKey: nextKey } = await listGyms(targetOrg, 100, lastKey);
-
-    for (const targetGym of items) {
-      // Skip if already linked to a master gym
-      if (targetGym.masterGymId) continue;
-
-      const { score, signals } = calculateMatchScore(sourceGym, targetGym);
-
-      if (score >= threshold) {
-        matches.push({ gym: targetGym, score, signals });
-      }
+  // Compare against cached gyms instead of querying DB
+  for (const targetGym of cachedTargetGyms) {
+    // Skip if same gym
+    if (
+      sourceGym.org === targetGym.org &&
+      sourceGym.externalId === targetGym.externalId
+    ) {
+      continue;
     }
 
-    lastKey = nextKey;
-  } while (lastKey);
+    // Skip if target gym is already linked
+    if (targetGym.masterGymId) {
+      continue;
+    }
+
+    // Calculate similarity using new Jaro-Winkler algorithm
+    const score = calculateSimilarity(
+      sourceGym.name,
+      targetGym.name,
+      sourceGym.city ?? undefined,
+      targetGym.city ?? undefined
+    );
+
+    // Only keep matches ≥70%
+    if (score >= 70) {
+      // Also calculate match signals for backward compatibility
+      const { signals } = calculateMatchScore(sourceGym, targetGym);
+      matches.push({ gym: targetGym, score, signals });
+    }
+  }
 
   // Sort by score descending
-  return matches.sort((a, b) => b.score - a.score);
+  matches.sort((a, b) => b.score - a.score);
+
+  return matches;
 }
 
 /**
- * Process gym matches:
- * - ≥90%: Auto-link to new master gym
- * - 70-89%: Create pending match for admin review
- * Returns counts of auto-linked and pending matches
+ * Process matches for a gym: auto-link high-confidence or create pending match.
+ * @param sourceGym - The gym to process
+ * @param cachedTargetGyms - Pre-loaded array of target gyms
  */
 export async function processGymMatches(
-  sourceGym: SourceGymItem
+  sourceGym: SourceGymItem,
+  cachedTargetGyms: SourceGymItem[]
 ): Promise<{ autoLinked: number; pendingCreated: number }> {
   // Skip if already linked
   if (sourceGym.masterGymId) {
     return { autoLinked: 0, pendingCreated: 0 };
   }
 
-  const matches = await findMatchesForGym(sourceGym);
-  let autoLinked = 0;
-  let pendingCreated = 0;
+  const matches = await findMatchesForGym(sourceGym, cachedTargetGyms);
 
-  for (const match of matches) {
-    if (match.score >= 90) {
-      // Auto-link: Create master gym and link both source gyms
-      const masterGym = await createMasterGym({
-        canonicalName: sourceGym.name, // Use source gym name as canonical
-        city: sourceGym.city || match.gym.city,
-        country: sourceGym.country || match.gym.country,
+  if (matches.length === 0) {
+    return { autoLinked: 0, pendingCreated: 0 };
+  }
+
+  const topMatch = matches[0];
+
+  // Auto-link if ≥90% confidence
+  if (topMatch.score >= 90) {
+    const masterGym = await createMasterGym({
+      canonicalName: sourceGym.name,
+      city: sourceGym.city || topMatch.gym.city,
+      country: sourceGym.country || topMatch.gym.country,
+    });
+
+    await linkSourceGymToMaster(sourceGym.org, sourceGym.externalId, masterGym.id);
+    await linkSourceGymToMaster(topMatch.gym.org, topMatch.gym.externalId, masterGym.id);
+
+    return { autoLinked: 1, pendingCreated: 0 };
+  }
+
+  // Create pending match for admin review if 70-89%
+  if (topMatch.score >= 70 && topMatch.score < 90) {
+    // Check for existing pending match
+    const existingMatch = await findExistingPendingMatch(
+      `SRCGYM#${sourceGym.org}#${sourceGym.externalId}`,
+      `SRCGYM#${topMatch.gym.org}#${topMatch.gym.externalId}`
+    );
+
+    if (!existingMatch) {
+      await createPendingMatch({
+        sourceGym1Id: `SRCGYM#${sourceGym.org}#${sourceGym.externalId}`,
+        sourceGym1Name: sourceGym.name,
+        sourceGym2Id: `SRCGYM#${topMatch.gym.org}#${topMatch.gym.externalId}`,
+        sourceGym2Name: topMatch.gym.name,
+        confidence: topMatch.score,
+        signals: topMatch.signals,
       });
 
-      await linkSourceGymToMaster(sourceGym.org, sourceGym.externalId, masterGym.id);
-      await linkSourceGymToMaster(match.gym.org, match.gym.externalId, masterGym.id);
-
-      autoLinked++;
-      // Only process the first auto-link match
-      break;
-    } else if (match.score >= 70) {
-      // Check for existing pending match
-      const existingMatch = await findExistingPendingMatch(
-        `SRCGYM#${sourceGym.org}#${sourceGym.externalId}`,
-        `SRCGYM#${match.gym.org}#${match.gym.externalId}`
-      );
-
-      if (!existingMatch) {
-        await createPendingMatch({
-          sourceGym1Id: `SRCGYM#${sourceGym.org}#${sourceGym.externalId}`,
-          sourceGym1Name: sourceGym.name,
-          sourceGym2Id: `SRCGYM#${match.gym.org}#${match.gym.externalId}`,
-          sourceGym2Name: match.gym.name,
-          confidence: match.score,
-          signals: match.signals,
-        });
-
-        pendingCreated++;
-      }
+      return { autoLinked: 0, pendingCreated: 1 };
     }
   }
 
-  return { autoLinked, pendingCreated };
+  return { autoLinked: 0, pendingCreated: 0 };
 }

@@ -13,7 +13,7 @@ import {
 } from '../db/gymQueries.js';
 import { queryTournaments } from '../db/queries.js';
 import { processGymMatches } from './gymMatchingService.js';
-import type { TournamentItem } from '../db/types.js';
+import type { TournamentItem, SourceGymItem } from '../db/types.js';
 import type { NormalizedGym } from '../fetchers/types.js';
 
 export interface GymSyncResult {
@@ -59,6 +59,11 @@ export interface IBJJFSyncOptions {
 /**
  * Run matching for a list of gyms.
  * Fetches each gym from DB to check if already linked, then processes unlinked gyms.
+ *
+ * TODO: Task 9 - Implement gym caching optimization
+ * This function currently passes an empty array to processGymMatches,
+ * which is a placeholder. Future task will pre-load US IBJJF gyms once
+ * and pass them to all matching calls to eliminate redundant DB queries.
  */
 async function runMatchingForGyms(
   gyms: NormalizedGym[]
@@ -66,6 +71,9 @@ async function runMatchingForGyms(
   let processed = 0;
   let autoLinked = 0;
   let pendingCreated = 0;
+
+  // TODO: Task 9 - Pre-load US IBJJF gyms here and pass to processGymMatches
+  const cachedGyms: SourceGymItem[] = [];
 
   for (const gym of gyms) {
     // Get the full source gym from DB to check masterGymId
@@ -76,7 +84,7 @@ async function runMatchingForGyms(
     }
 
     // Run matching for this unlinked gym
-    const result = await processGymMatches(sourceGym);
+    const result = await processGymMatches(sourceGym, cachedGyms);
     processed++;
     autoLinked += result.autoLinked;
     pendingCreated += result.pendingCreated;
