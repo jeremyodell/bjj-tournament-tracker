@@ -56,7 +56,7 @@ export async function processOnboarding(
       beltRank: athleteData.beltRank,
       birthYear,
       weight: athleteData.weight,
-      masterGymId: athleteData.masterGymId || null,
+      masterGymId: athleteData.masterGymId || undefined,
     };
 
     const athlete = await createAthlete(userId, athleteInput);
