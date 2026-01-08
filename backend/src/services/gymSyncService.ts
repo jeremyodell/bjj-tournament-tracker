@@ -10,6 +10,7 @@ import {
   getSourceGym,
   getGymSyncMeta,
   updateGymSyncMeta,
+  listUSIBJJFGyms,
 } from '../db/gymQueries.js';
 import { queryTournaments } from '../db/queries.js';
 import { processGymMatches } from './gymMatchingService.js';
@@ -57,25 +58,25 @@ export interface IBJJFSyncOptions {
 }
 
 /**
- * Run matching for a list of gyms.
- * Fetches each gym from DB to check if already linked, then processes unlinked gyms.
- *
- * TODO: Task 9 - Implement gym caching optimization
- * This function currently passes an empty array to processGymMatches,
- * which is a placeholder. Future task will pre-load US IBJJF gyms once
- * and pass them to all matching calls to eliminate redundant DB queries.
+ * Run matching for JJWL gyms against cached US IBJJF gyms.
+ * Loads US IBJJF gyms once, then compares all JJWL gyms against that cache.
  */
-async function runMatchingForGyms(
-  gyms: NormalizedGym[]
+async function runMatchingForJJWLGyms(
+  jjwlGyms: NormalizedGym[]
 ): Promise<{ processed: number; autoLinked: number; pendingCreated: number }> {
+  console.log('[GymSyncService] Loading US IBJJF gyms for matching...');
+  const startLoad = Date.now();
+  const usIbjjfGyms = await listUSIBJJFGyms();
+  const loadDuration = Date.now() - startLoad;
+  console.log(
+    `[GymSyncService] Loaded ${usIbjjfGyms.length} US IBJJF gyms in ${loadDuration}ms`
+  );
+
   let processed = 0;
   let autoLinked = 0;
   let pendingCreated = 0;
 
-  // TODO: Task 9 - Pre-load US IBJJF gyms here and pass to processGymMatches
-  const cachedGyms: SourceGymItem[] = [];
-
-  for (const gym of gyms) {
+  for (const gym of jjwlGyms) {
     // Get the full source gym from DB to check masterGymId
     const sourceGym = await getSourceGym(gym.org, gym.externalId);
     if (!sourceGym || sourceGym.masterGymId) {
@@ -83,11 +84,18 @@ async function runMatchingForGyms(
       continue;
     }
 
-    // Run matching for this unlinked gym
-    const result = await processGymMatches(sourceGym, cachedGyms);
+    // Run matching for this unlinked gym using cached array
+    const result = await processGymMatches(sourceGym, usIbjjfGyms);
     processed++;
     autoLinked += result.autoLinked;
     pendingCreated += result.pendingCreated;
+
+    // Progress logging every 100 gyms
+    if (processed % 100 === 0) {
+      console.log(
+        `[GymSyncService] Matching progress: ${processed}/${jjwlGyms.length}`
+      );
+    }
   }
 
   return { processed, autoLinked, pendingCreated };
@@ -104,7 +112,7 @@ export async function syncJJWLGyms(): Promise<GymSyncResult> {
     const saved = await batchUpsertGyms(gyms);
 
     // Run matching for unlinked gyms
-    const matching = await runMatchingForGyms(gyms);
+    const matching = await runMatchingForJJWLGyms(gyms);
     console.log(
       `[GymSyncService] JJWL matching: ${matching.processed} processed, ${matching.autoLinked} auto-linked, ${matching.pendingCreated} pending`
     );
@@ -166,12 +174,6 @@ export async function syncIBJJFGyms(
     // Batch upsert to database
     const saved = await batchUpsertGyms(gyms);
 
-    // Run matching for unlinked gyms
-    const matching = await runMatchingForGyms(gyms);
-    console.log(
-      `[GymSyncService] IBJJF matching: ${matching.processed} processed, ${matching.autoLinked} auto-linked, ${matching.pendingCreated} pending`
-    );
-
     // Update sync metadata
     await updateGymSyncMeta('IBJJF', totalRecords);
 
@@ -185,7 +187,6 @@ export async function syncIBJJFGyms(
       fetched: gyms.length,
       saved,
       duration,
-      matching,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
