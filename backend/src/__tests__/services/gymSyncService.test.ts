@@ -167,6 +167,7 @@ describe('gymSyncService', () => {
           org: 'JJWL',
           externalId: '123',
           name: 'Test Tournament',
+          slug: null,
           city: 'Dallas',
           venue: 'Convention Center',
           country: 'USA',

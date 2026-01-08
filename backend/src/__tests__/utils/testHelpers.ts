@@ -131,6 +131,7 @@ export function mockTournamentItem(
     org: 'IBJJF',
     externalId: '123',
     name: 'Pan American Championship',
+    slug: null,
     city: 'Irvine',
     venue: 'Bren Events Center',
     country: 'USA',

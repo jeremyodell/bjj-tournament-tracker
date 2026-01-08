@@ -59,6 +59,7 @@ export interface TournamentItem {
   org: 'IBJJF' | 'JJWL';
   externalId: string;
   name: string;
+  slug: string | null; // URL-friendly identifier
   city: string;
   venue: string | null;
   country: string | null;
@@ -87,6 +88,7 @@ export interface UserProfileItem {
   homeState: string | null;
   nearestAirport: string | null;
   gymName: string | null;
+  masterGymId: string | null; // Links to unified master gym
   createdAt: string;
   updatedAt: string;
 }
