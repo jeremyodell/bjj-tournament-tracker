@@ -246,7 +246,15 @@ export interface MasterGym {
   updatedAt: string;
 }
 
-export async function searchMasterGyms(query: string): Promise<MasterGym[]> {
+// Search result type (subset of MasterGym fields returned by search endpoint)
+export interface MasterGymSearchResult {
+  id: string;
+  canonicalName: string;
+  city: string | null;
+  country: string | null;
+}
+
+export async function searchMasterGyms(query: string): Promise<MasterGymSearchResult[]> {
   const response = await api.get(`/master-gyms/search?q=${encodeURIComponent(query)}`);
   return response.data.gyms || [];
 }

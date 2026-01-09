@@ -111,6 +111,38 @@ export function AthleteFormStep({ athleteIndex }: AthleteFormStepProps) {
       </div>
 
       <div className="space-y-6 glass-card rounded-xl p-6">
+        {/* Gym Selection - Moved to top to avoid z-index conflicts with navigation buttons */}
+        <div>
+          <label
+            className="block text-xs font-semibold mb-2 uppercase tracking-wide text-white/80"
+            style={{ fontFamily: 'var(--font-mono-display)' }}
+          >
+            Gym *
+          </label>
+          <GymSearchWithOther
+            value={{
+              masterGymId: athlete.masterGymId,
+              masterGymName: athlete.masterGymName,
+              gymCity: athlete.gymCity,
+              gymCountry: athlete.gymCountry,
+              customGymName: athlete.customGymName,
+            }}
+            onChange={(gymData) => {
+              updateAthlete(athleteIndex, gymData);
+              if (errors.gym) {
+                setErrors((prev) => {
+                  const newErrors = { ...prev };
+                  delete newErrors.gym;
+                  return newErrors;
+                });
+              }
+            }}
+          />
+          {errors.gym && (
+            <p className="text-[var(--destructive)] text-sm mt-1 font-medium">{errors.gym}</p>
+          )}
+        </div>
+
         {/* Name */}
         <div>
           <label
@@ -264,37 +296,6 @@ export function AthleteFormStep({ athleteIndex }: AthleteFormStepProps) {
             <p className="text-[var(--destructive)] text-sm mt-1 font-medium">
               {errors.weight}
             </p>
-          )}
-        </div>
-
-        {/* Gym Selection */}
-        <div>
-          <label
-            className="block text-xs font-semibold mb-2 uppercase tracking-wide text-white/80"
-            style={{ fontFamily: 'var(--font-mono-display)' }}
-          >
-            Gym *
-          </label>
-          <GymSearchWithOther
-            athleteIndex={athleteIndex}
-            value={{
-              masterGymId: athlete.masterGymId,
-              masterGymName: athlete.masterGymName,
-              customGymName: athlete.customGymName,
-            }}
-            onChange={(gymData) => {
-              updateAthlete(athleteIndex, gymData);
-              if (errors.gym) {
-                setErrors((prev) => {
-                  const newErrors = { ...prev };
-                  delete newErrors.gym;
-                  return newErrors;
-                });
-              }
-            }}
-          />
-          {errors.gym && (
-            <p className="text-[var(--destructive)] text-sm mt-1 font-medium">{errors.gym}</p>
           )}
         </div>
       </div>

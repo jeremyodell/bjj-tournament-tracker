@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { searchMasterGyms, type MasterGym } from '@/lib/api';
+import { searchMasterGyms, type MasterGymSearchResult } from '@/lib/api';
 
 const MINIMUM_SEARCH_LENGTH = 2;
 const STALE_TIME = 30 * 1000; // 30 seconds
@@ -13,7 +13,7 @@ export function useMasterGymSearch(query: string) {
   const trimmedQuery = query.trim();
   const shouldSearch = trimmedQuery.length >= MINIMUM_SEARCH_LENGTH;
 
-  return useQuery<MasterGym[], Error>({
+  return useQuery<MasterGymSearchResult[], Error>({
     queryKey: ['master-gyms', 'search', trimmedQuery],
     queryFn: () => searchMasterGyms(trimmedQuery),
     enabled: shouldSearch,

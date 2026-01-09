@@ -8,6 +8,8 @@ export interface OnboardingAthleteData {
   weight: number | null;
   masterGymId?: string; // If user selected an existing gym
   masterGymName?: string; // Display name for selected gym
+  gymCity?: string; // City of selected gym
+  gymCountry?: string; // Country of selected gym
   customGymName?: string; // If user selected "Other" gym option
 }
 

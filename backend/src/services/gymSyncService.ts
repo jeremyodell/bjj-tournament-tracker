@@ -15,6 +15,7 @@ import {
 } from '../db/gymQueries.js';
 import { queryTournaments } from '../db/queries.js';
 import { processGymMatches } from './gymMatchingService.js';
+import { createMasterGym, linkSourceGymToMaster } from '../db/masterGymQueries.js';
 import type { TournamentItem, SourceGymItem } from '../db/types.js';
 import type { NormalizedGym } from '../fetchers/types.js';
 
@@ -25,6 +26,7 @@ export interface GymSyncResult {
     processed: number;
     autoLinked: number;
     pendingCreated: number;
+    singleOrgMasters: number;
   };
   error?: string;
 }
@@ -49,6 +51,7 @@ export interface IBJJFGymSyncResult {
     processed: number;
     autoLinked: number;
     pendingCreated: number;
+    singleOrgMasters: number;
   };
   error?: string;
 }
@@ -59,12 +62,118 @@ export interface IBJJFSyncOptions {
 }
 
 /**
+ * Create master gyms for all source gyms that don't have one yet.
+ * Called after matching to ensure every gym has a master.
+ */
+async function createMastersForUnlinkedGyms(
+  sourceGyms: SourceGymItem[]
+): Promise<number> {
+  let created = 0;
+
+  for (const gym of sourceGyms) {
+    if (!gym.masterGymId) {
+      const masterGym = await createMasterGym({
+        canonicalName: gym.name,
+        city: gym.city,
+        country: gym.country,
+      });
+
+      await linkSourceGymToMaster(gym.org, gym.externalId, masterGym.id);
+      created++;
+
+      // Progress logging every 100 gyms
+      if (created % 100 === 0) {
+        console.log(
+          `[GymSyncService] Created ${created} single-org masters...`
+        );
+      }
+    }
+  }
+
+  return created;
+}
+
+/**
+ * Run matching for IBJJF gyms against cached JJWL gyms.
+ * Loads both JJWL and US IBJJF gyms once to eliminate N+1 query pattern.
+ */
+async function runMatchingForIBJJFGyms(
+  ibjjfGyms: NormalizedGym[]
+): Promise<{ processed: number; autoLinked: number; pendingCreated: number; singleOrgMasters: number }> {
+  console.log('[GymSyncService] Loading gyms for IBJJF matching...');
+  const startLoad = Date.now();
+
+  // Load both JJWL and US IBJJF gyms in parallel
+  const [jjwlSourceGyms, usIbjjfGyms] = await Promise.all([
+    listAllJJWLGyms(),
+    listUSIBJJFGyms(),
+  ]);
+
+  const loadDuration = Date.now() - startLoad;
+  console.log(
+    `[GymSyncService] Loaded ${jjwlSourceGyms.length} JJWL gyms and ${usIbjjfGyms.length} US IBJJF gyms in ${loadDuration}ms`
+  );
+
+  // Create Map for O(1) lookup of IBJJF source gyms by key
+  const ibjjfGymMap = new Map<string, SourceGymItem>();
+  for (const gym of usIbjjfGyms) {
+    const key = `${gym.org}#${gym.externalId}`;
+    ibjjfGymMap.set(key, gym);
+  }
+
+  let processed = 0;
+  let autoLinked = 0;
+  let pendingCreated = 0;
+
+  const matchingStart = Date.now();
+  for (const gym of ibjjfGyms) {
+    // Lookup source gym from Map (O(1) instead of DB query)
+    const key = `${gym.org}#${gym.externalId}`;
+    const sourceGym = ibjjfGymMap.get(key);
+
+    if (!sourceGym || sourceGym.masterGymId) {
+      // Already linked or not found, skip
+      continue;
+    }
+
+    // Run matching for this unlinked gym using cached JJWL array
+    const result = await processGymMatches(sourceGym, jjwlSourceGyms);
+    processed++;
+    autoLinked += result.autoLinked;
+    pendingCreated += result.pendingCreated;
+
+    // Progress logging every 100 gyms
+    if (processed % 100 === 0) {
+      console.log(
+        `[GymSyncService] IBJJF matching progress: ${processed}/${ibjjfGyms.length}`
+      );
+    }
+  }
+
+  const matchingDuration = Date.now() - matchingStart;
+  console.log(
+    `[GymSyncService] IBJJF matching completed in ${matchingDuration}ms (${(matchingDuration / 1000).toFixed(1)}s)`
+  );
+
+  // Create masters for any unlinked IBJJF gyms (single-org gyms with no match)
+  console.log('[GymSyncService] Creating masters for unlinked IBJJF gyms...');
+  const singleOrgStart = Date.now();
+  const singleOrgMasters = await createMastersForUnlinkedGyms(usIbjjfGyms);
+  const singleOrgDuration = Date.now() - singleOrgStart;
+  console.log(
+    `[GymSyncService] Created ${singleOrgMasters} single-org IBJJF masters in ${singleOrgDuration}ms`
+  );
+
+  return { processed, autoLinked, pendingCreated, singleOrgMasters };
+}
+
+/**
  * Run matching for JJWL gyms against cached US IBJJF gyms.
  * Loads both JJWL and US IBJJF gyms once to eliminate N+1 query pattern.
  */
 async function runMatchingForJJWLGyms(
   jjwlGyms: NormalizedGym[]
-): Promise<{ processed: number; autoLinked: number; pendingCreated: number }> {
+): Promise<{ processed: number; autoLinked: number; pendingCreated: number; singleOrgMasters: number }> {
   console.log('[GymSyncService] Loading gyms for matching...');
   const startLoad = Date.now();
 
@@ -120,7 +229,16 @@ async function runMatchingForJJWLGyms(
     `[GymSyncService] Matching completed in ${matchingDuration}ms (${(matchingDuration / 1000).toFixed(1)}s)`
   );
 
-  return { processed, autoLinked, pendingCreated };
+  // Create masters for any unlinked gyms (single-org gyms with no match)
+  console.log('[GymSyncService] Creating masters for unlinked gyms...');
+  const singleOrgStart = Date.now();
+  const singleOrgMasters = await createMastersForUnlinkedGyms(jjwlSourceGyms);
+  const singleOrgDuration = Date.now() - singleOrgStart;
+  console.log(
+    `[GymSyncService] Created ${singleOrgMasters} single-org masters in ${singleOrgDuration}ms`
+  );
+
+  return { processed, autoLinked, pendingCreated, singleOrgMasters };
 }
 
 /**
@@ -136,7 +254,7 @@ export async function syncJJWLGyms(): Promise<GymSyncResult> {
     // Run matching for unlinked gyms
     const matching = await runMatchingForJJWLGyms(gyms);
     console.log(
-      `[GymSyncService] JJWL matching: ${matching.processed} processed, ${matching.autoLinked} auto-linked, ${matching.pendingCreated} pending`
+      `[GymSyncService] JJWL matching: ${matching.processed} processed, ${matching.autoLinked} auto-linked, ${matching.pendingCreated} pending, ${matching.singleOrgMasters} single-org masters created`
     );
 
     return {
@@ -199,6 +317,12 @@ export async function syncIBJJFGyms(
     // Update sync metadata
     await updateGymSyncMeta('IBJJF', totalRecords);
 
+    // Run matching for unlinked gyms
+    const matching = await runMatchingForIBJJFGyms(gyms);
+    console.log(
+      `[GymSyncService] IBJJF matching: ${matching.processed} processed, ${matching.autoLinked} auto-linked, ${matching.pendingCreated} pending, ${matching.singleOrgMasters} single-org masters created`
+    );
+
     const duration = Date.now() - startTime;
     console.log(
       `[GymSyncService] IBJJF sync complete: ${gyms.length} fetched, ${saved} saved in ${duration}ms`
@@ -209,6 +333,7 @@ export async function syncIBJJFGyms(
       fetched: gyms.length,
       saved,
       duration,
+      matching,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';

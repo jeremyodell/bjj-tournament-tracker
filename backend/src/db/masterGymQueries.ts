@@ -20,7 +20,7 @@ export async function createMasterGym(data: {
     PK: buildMasterGymPK(id),
     SK: 'META',
     GSI1PK: 'MASTERGYMS',
-    GSI1SK: data.canonicalName,
+    GSI1SK: data.canonicalName.toLowerCase(), // Lowercase for case-insensitive search
     id,
     canonicalName: data.canonicalName,
     city: data.city ?? null,
@@ -59,7 +59,7 @@ export async function getMasterGym(id: string): Promise<MasterGymItem | null> {
 }
 
 /**
- * Search master gyms by name prefix using GSI1
+ * Search master gyms by name prefix using GSI1 (case-insensitive)
  */
 export async function searchMasterGyms(
   namePrefix: string,
@@ -71,7 +71,7 @@ export async function searchMasterGyms(
     KeyConditionExpression: 'GSI1PK = :pk AND begins_with(GSI1SK, :prefix)',
     ExpressionAttributeValues: {
       ':pk': 'MASTERGYMS',
-      ':prefix': namePrefix,
+      ':prefix': namePrefix.toLowerCase(), // Convert to lowercase for case-insensitive search
     },
     Limit: limit,
   });

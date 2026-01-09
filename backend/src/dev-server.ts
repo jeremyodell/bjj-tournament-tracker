@@ -5,6 +5,7 @@
  * This allows testing the same Lambda code locally without AWS.
  */
 
+import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import type { APIGatewayProxyEvent, Context, APIGatewayProxyResult } from 'aws-lambda';

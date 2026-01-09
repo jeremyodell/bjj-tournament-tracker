@@ -74,6 +74,7 @@ describe('gymSyncService', () => {
         processed: 2,
         autoLinked: 0,
         pendingCreated: 2,
+        singleOrgMasters: 2,
       });
       expect(result.error).toBeUndefined();
     });
@@ -102,6 +103,7 @@ describe('gymSyncService', () => {
         processed: 0,
         autoLinked: 0,
         pendingCreated: 0,
+        singleOrgMasters: 0,
       });
     });
 
@@ -153,6 +155,7 @@ describe('gymSyncService', () => {
         processed: 0,
         autoLinked: 0,
         pendingCreated: 0,
+        singleOrgMasters: 0,
       });
       expect(result.error).toBeUndefined();
     });
@@ -244,6 +247,7 @@ describe('gymSyncService', () => {
         processed: 1,
         autoLinked: 1,
         pendingCreated: 0,
+        singleOrgMasters: 1,
       });
       expect(processMatchesMock).toHaveBeenCalledTimes(1);
     });
@@ -273,6 +277,7 @@ describe('gymSyncService', () => {
         processed: 2,
         autoLinked: 0,
         pendingCreated: 2, // One pending match per gym
+        singleOrgMasters: 2,
       });
       expect(processMatchesMock).toHaveBeenCalledTimes(2);
     });
@@ -307,6 +312,7 @@ describe('gymSyncService', () => {
         processed: 1,
         autoLinked: 0,
         pendingCreated: 1,
+        singleOrgMasters: 1,
       });
     });
 
@@ -364,17 +370,18 @@ describe('gymSyncService', () => {
         processed: 3,
         autoLinked: 1,
         pendingCreated: 1,
+        singleOrgMasters: 3,
       });
       expect(processMatchesMock).toHaveBeenCalledTimes(3);
     });
   });
 
-  describe('syncIBJJFGyms without matching', () => {
+  describe('syncIBJJFGyms with matching', () => {
     beforeEach(() => {
       jest.clearAllMocks();
     });
 
-    it('should NOT run matching during IBJJF sync', async () => {
+    it('should run matching during IBJJF sync', async () => {
       const mockGyms: IBJJFNormalizedGym[] = [
         {
           org: 'IBJJF',
@@ -390,21 +397,26 @@ describe('gymSyncService', () => {
       const fetchAllMock = jest.spyOn(ibjjfGymFetcher, 'fetchAllIBJJFGyms');
       const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
       const updateSyncMetaMock = jest.spyOn(gymQueries, 'updateGymSyncMeta');
-      const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
+      const listJJWLGymsMock = jest.spyOn(gymQueries, 'listAllJJWLGyms');
+      const listUSIBJJFGymsMock = jest.spyOn(gymQueries, 'listUSIBJJFGyms');
 
       fetchCountMock.mockResolvedValue(1);
       getSyncMetaMock.mockResolvedValue(null); // First sync
       fetchAllMock.mockResolvedValue(mockGyms);
       batchUpsertMock.mockResolvedValue(1);
       updateSyncMetaMock.mockResolvedValue();
+      listJJWLGymsMock.mockResolvedValue([]);
+      listUSIBJJFGymsMock.mockResolvedValue([]);
 
       const result = await syncIBJJFGyms();
 
-      // processGymMatches should NOT be called during IBJJF sync
-      expect(processMatchesMock).not.toHaveBeenCalled();
-
-      // matching field should be undefined (not run)
-      expect(result.matching).toBeUndefined();
+      // matching field should be defined with results
+      expect(result.matching).toEqual({
+        processed: 0,
+        autoLinked: 0,
+        pendingCreated: 0,
+        singleOrgMasters: 0,
+      });
       expect(result.fetched).toBe(1);
       expect(result.saved).toBe(1);
     });
@@ -669,22 +681,29 @@ describe('gymSyncService', () => {
       const getSyncMetaMock = jest.spyOn(gymQueries, 'getGymSyncMeta');
       const batchUpsertMock = jest.spyOn(gymQueries, 'batchUpsertGyms');
       const updateSyncMetaMock = jest.spyOn(gymQueries, 'updateGymSyncMeta');
-      const processMatchesMock = jest.spyOn(gymMatchingService, 'processGymMatches');
+      const listJJWLGymsMock = jest.spyOn(gymQueries, 'listAllJJWLGyms');
+      const listUSIBJJFGymsMock = jest.spyOn(gymQueries, 'listUSIBJJFGyms');
 
       fetchCountMock.mockResolvedValue(8600); // Changed from 8573
       getSyncMetaMock.mockResolvedValue(mockSyncMeta);
       fetchAllMock.mockResolvedValue(mockGyms);
       batchUpsertMock.mockResolvedValue(2);
       updateSyncMetaMock.mockResolvedValue(undefined);
+      listJJWLGymsMock.mockResolvedValue([]);
+      listUSIBJJFGymsMock.mockResolvedValue([]);
 
       const result = await syncIBJJFGyms();
 
       expect(result.skipped).toBe(false);
       expect(result.fetched).toBe(2);
       expect(result.saved).toBe(2);
-      // IBJJF sync should NOT run matching
-      expect(result.matching).toBeUndefined();
-      expect(processMatchesMock).not.toHaveBeenCalled();
+      // IBJJF sync now runs matching
+      expect(result.matching).toEqual({
+        processed: 0,
+        autoLinked: 0,
+        pendingCreated: 0,
+        singleOrgMasters: 0,
+      });
       expect(fetchAllMock).toHaveBeenCalled();
       expect(updateSyncMetaMock).toHaveBeenCalledWith('IBJJF', 8600);
     });

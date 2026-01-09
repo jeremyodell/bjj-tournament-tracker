@@ -274,6 +274,7 @@ export async function processGymMatches(
 
   const matches = await findMatchesForGym(sourceGym, cachedTargetGyms);
 
+  // No matches found - sourceGym will get its own master created by sync service
   if (matches.length === 0) {
     return { autoLinked: 0, pendingCreated: 0 };
   }
@@ -282,14 +283,25 @@ export async function processGymMatches(
 
   // Auto-link if ≥90% confidence
   if (topMatch.score >= 90) {
-    const masterGym = await createMasterGym({
-      canonicalName: sourceGym.name,
-      city: sourceGym.city || topMatch.gym.city,
-      country: sourceGym.country || topMatch.gym.country,
-    });
+    // Check if either gym already has a master
+    let masterGymId: string;
 
-    await linkSourceGymToMaster(sourceGym.org, sourceGym.externalId, masterGym.id);
-    await linkSourceGymToMaster(topMatch.gym.org, topMatch.gym.externalId, masterGym.id);
+    if (topMatch.gym.masterGymId) {
+      // Target gym already has a master - link source to it
+      masterGymId = topMatch.gym.masterGymId;
+      await linkSourceGymToMaster(sourceGym.org, sourceGym.externalId, masterGymId);
+    } else {
+      // Neither has a master - create new shared master
+      const masterGym = await createMasterGym({
+        canonicalName: sourceGym.name,
+        city: sourceGym.city || topMatch.gym.city,
+        country: sourceGym.country || topMatch.gym.country,
+      });
+      masterGymId = masterGym.id;
+
+      await linkSourceGymToMaster(sourceGym.org, sourceGym.externalId, masterGymId);
+      await linkSourceGymToMaster(topMatch.gym.org, topMatch.gym.externalId, masterGymId);
+    }
 
     return { autoLinked: 1, pendingCreated: 0 };
   }

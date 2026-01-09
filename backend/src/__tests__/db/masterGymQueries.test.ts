@@ -46,7 +46,7 @@ describe('masterGymQueries', () => {
       expect(input.Item.PK).toBe(`MASTERGYM#${mockUUID}`);
       expect(input.Item.SK).toBe('META');
       expect(input.Item.GSI1PK).toBe('MASTERGYMS');
-      expect(input.Item.GSI1SK).toBe('Gracie Barra');
+      expect(input.Item.GSI1SK).toBe('gracie barra'); // Lowercase for case-insensitive search
       expect(input.Item.id).toBe(mockUUID);
       expect(input.Item.canonicalName).toBe('Gracie Barra');
       expect(input.Item.city).toBe('Irvine');
@@ -184,7 +184,7 @@ describe('masterGymQueries', () => {
         'GSI1PK = :pk AND begins_with(GSI1SK, :prefix)'
       );
       expect(input.ExpressionAttributeValues[':pk']).toBe('MASTERGYMS');
-      expect(input.ExpressionAttributeValues[':prefix']).toBe('Alliance');
+      expect(input.ExpressionAttributeValues[':prefix']).toBe('alliance'); // Lowercase for case-insensitive search
       expect(input.Limit).toBe(10);
     });
 
