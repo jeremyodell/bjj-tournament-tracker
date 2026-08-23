@@ -52,3 +52,7 @@ backend/.aws-sam/
 
 # Temp files
 response.json
+
+# --- ~/Work conventions (jbo-onboard) ---
+.mise.local.toml
+.claude/settings.local.json
