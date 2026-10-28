@@ -1,7 +1,6 @@
 import type { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { withErrorHandler, jsonResponse } from './middleware/errorHandler.js';
-import { searchGyms, searchGymsAcrossOrgs, getSourceGym, getGymRoster } from '../db/gymQueries.js';
-import { syncGymRoster } from '../services/gymSyncService.js';
+import { searchGyms, searchGymsAcrossOrgs, getSourceGym } from '../db/gymQueries.js';
 import { ValidationError, NotFoundError } from '../shared/errors.js';
 
 type AsyncHandler = (
@@ -58,42 +57,14 @@ const gymsHandler: AsyncHandler = async (event) => {
     });
   }
 
-  // GET /gyms/:org/:externalId/roster/:tournamentId - get roster
-  if (method === 'GET' && pathOrg && externalId && tournamentId) {
-    if (pathOrg !== 'JJWL' && pathOrg !== 'IBJJF') {
-      throw new ValidationError('org must be JJWL or IBJJF');
-    }
-
-    // Check cache first
-    let roster = await getGymRoster(pathOrg, tournamentId, externalId);
-
-    // If no cached roster, fetch it
-    if (!roster) {
-      const result = await syncGymRoster(pathOrg, tournamentId, externalId);
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to fetch roster');
-      }
-      roster = await getGymRoster(pathOrg, tournamentId, externalId);
-    }
-
-    // Return empty roster if still nothing
-    if (!roster) {
-      return jsonResponse(200, {
-        gymExternalId: externalId,
-        gymName: null,
-        athletes: [],
-        athleteCount: 0,
-        fetchedAt: null,
-      });
-    }
-
-    return jsonResponse(200, {
-      gymExternalId: roster.gymExternalId,
-      gymName: roster.gymName,
-      athletes: roster.athletes,
-      athleteCount: roster.athleteCount,
-      fetchedAt: roster.fetchedAt,
-    });
+  // GET /gyms/:org/:externalId/roster/:tournamentId - removed (R0).
+  // This route exposed other gyms' athlete rosters (minors' names, belts,
+  // ages, weights) to anonymous callers and fetched from JJWL on a cache miss.
+  // The API Gateway route is gone from template.yaml; this branch makes sure
+  // the handler never serves roster data or triggers a provider fetch even if
+  // a roster-shaped path reaches it.
+  if (tournamentId) {
+    return jsonResponse(404, { error: 'Not found' });
   }
 
   return jsonResponse(405, { error: 'Method not allowed' });

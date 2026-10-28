@@ -32,4 +32,5 @@ s3_prefix = "bjj-tournament-tracker-prod"
 region = "us-east-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = "Stage=prod EnableScheduledSync=true"
+# R1: provider collection paused in every stage; CI fails if this is true.
+parameter_overrides = "Stage=prod EnableScheduledSync=false"
