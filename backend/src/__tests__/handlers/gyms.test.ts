@@ -1,4 +1,4 @@
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
 import {
   mockContext,
   parseResponseBody,
@@ -195,109 +195,64 @@ describe('gyms handler', () => {
     });
   });
 
-  describe('GET /gyms/:org/:externalId/roster/:tournamentId', () => {
-    it('returns cached roster', async () => {
-      const mockRoster = {
+  describe('GET /gyms/:org/:externalId/roster/:tournamentId (removed in R0)', () => {
+    let fetchSpy: jest.SpiedFunction<typeof globalThis.fetch>;
+
+    beforeEach(() => {
+      fetchSpy = jest
+        .spyOn(globalThis, 'fetch')
+        .mockRejectedValue(new Error('network access is not allowed in this test'));
+    });
+
+    afterEach(() => {
+      fetchSpy.mockRestore();
+    });
+
+    it('returns 404 to an anonymous caller', async () => {
+      const event = createGymRosterEvent('JJWL', '5713', '850');
+      const result = await handler(event, context);
+
+      expect(result.statusCode).toBe(404);
+    });
+
+    it('does not return cached roster data', async () => {
+      jest.spyOn(gymQueries, 'getGymRoster').mockResolvedValue({
         PK: 'TOURN#JJWL#850',
         SK: 'GYMROSTER#5713',
         gymExternalId: '5713',
-        gymName: 'Pablo Silva BJJ',
+        gymName: 'Synthetic Test Gym',
         athletes: [
-          {
-            name: 'John Doe',
-            belt: 'Blue',
-            ageDiv: 'Adult',
-            weight: 'Light',
-            gender: 'Male',
-          },
+          { name: 'Test Athlete', belt: 'Grey', ageDiv: 'Youth', weight: 'Light', gender: 'Male' },
         ],
         athleteCount: 1,
         fetchedAt: '2026-01-04T12:00:00.000Z',
-      };
-      jest.spyOn(gymQueries, 'getGymRoster').mockResolvedValue(mockRoster);
-
-      const event = createGymRosterEvent('JJWL', '5713', '850');
-      const result = await handler(event, context);
-
-      expect(result.statusCode).toBe(200);
-      const body = parseResponseBody<{
-        gymExternalId: string;
-        gymName: string;
-        athletes: unknown[];
-        athleteCount: number;
-        fetchedAt: string;
-      }>(result);
-      expect(body.gymExternalId).toBe('5713');
-      expect(body.gymName).toBe('Pablo Silva BJJ');
-      expect(body.athleteCount).toBe(1);
-      expect(body.fetchedAt).toBe('2026-01-04T12:00:00.000Z');
-    });
-
-    it('fetches roster if not cached', async () => {
-      jest
-        .spyOn(gymQueries, 'getGymRoster')
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({
-          PK: 'TOURN#JJWL#850',
-          SK: 'GYMROSTER#5713',
-          gymExternalId: '5713',
-          gymName: 'Test Gym',
-          athletes: [],
-          athleteCount: 0,
-          fetchedAt: '2026-01-04T12:00:00.000Z',
-        });
-
-      jest.spyOn(gymSyncService, 'syncGymRoster').mockResolvedValue({
-        success: true,
-        athleteCount: 0,
       });
 
       const event = createGymRosterEvent('JJWL', '5713', '850');
       const result = await handler(event, context);
 
-      expect(result.statusCode).toBe(200);
-      expect(gymSyncService.syncGymRoster).toHaveBeenCalledWith('JJWL', '850', '5713');
+      expect(result.statusCode).toBe(404);
+      expect(result.body).not.toContain('Test Athlete');
+      expect(gymQueries.getGymRoster).not.toHaveBeenCalled();
     });
 
-    it('returns empty roster when fetch returns nothing', async () => {
-      jest
-        .spyOn(gymQueries, 'getGymRoster')
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null);
-
-      jest.spyOn(gymSyncService, 'syncGymRoster').mockResolvedValue({
-        success: true,
-        athleteCount: 0,
-      });
-
-      const event = createGymRosterEvent('JJWL', '5713', '850');
-      const result = await handler(event, context);
-
-      expect(result.statusCode).toBe(200);
-      const body = parseResponseBody<{ athleteCount: number; athletes: unknown[] }>(result);
-      expect(body.athleteCount).toBe(0);
-      expect(body.athletes).toEqual([]);
-    });
-
-    it('returns 500 when roster fetch fails', async () => {
+    it('makes no JJWL request on a cache miss', async () => {
       jest.spyOn(gymQueries, 'getGymRoster').mockResolvedValue(null);
-      jest.spyOn(gymSyncService, 'syncGymRoster').mockResolvedValue({
-        success: false,
-        athleteCount: 0,
-        error: 'Network error',
-      });
 
       const event = createGymRosterEvent('JJWL', '5713', '850');
       const result = await handler(event, context);
 
-      expect(result.statusCode).toBe(500);
+      expect(result.statusCode).toBe(404);
+      expect(gymSyncService.syncGymRoster).not.toHaveBeenCalled();
+      expect(fetchSpy).not.toHaveBeenCalled();
     });
 
-    it('returns 400 for invalid org', async () => {
-      const event = createGymRosterEvent('INVALID', '5713', '850');
-      const result = await handler(event, context);
-
-      expect(result.statusCode).toBe(400);
+    it('returns 404 for any org, including invalid ones', async () => {
+      for (const org of ['IBJJF', 'INVALID']) {
+        const result = await handler(createGymRosterEvent(org, '5713', '850'), context);
+        expect(result.statusCode).toBe(404);
+      }
+      expect(fetchSpy).not.toHaveBeenCalled();
     });
   });
 

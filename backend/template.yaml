@@ -240,6 +240,15 @@ Resources:
               Access-Control-Allow-Origin: "'*'"
               Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'"
               Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        # Unknown routes (including the removed roster route) answer 404
+        # instead of API Gateway's default 403 "Missing Authentication Token".
+        MISSING_AUTHENTICATION_TOKEN:
+          StatusCode: '404'
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'"
+              Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
         ACCESS_DENIED:
           ResponseParameters:
             Headers:
@@ -454,12 +463,8 @@ Resources:
             RestApiId: !Ref TournamentsApi
             Path: /gyms/{org}/{externalId}
             Method: GET
-        GetRoster:
-          Type: Api
-          Properties:
-            RestApiId: !Ref TournamentsApi
-            Path: /gyms/{org}/{externalId}/roster/{tournamentId}
-            Method: GET
+        # GetRoster (GET /gyms/{org}/{externalId}/roster/{tournamentId}) removed
+        # in R0: it served other gyms' athlete rosters to anonymous callers.
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -1027,7 +1032,9 @@ Resources:
           Properties:
             Schedule: cron(0 6 ? * SUN *)
             Description: Weekly gym sync on Sundays at 6 AM UTC
-            Enabled: true
+            # R1: provider collection (IBJJF/JJWL) is paused in every stage.
+            # CI (backend/scripts/check-template-policy.ts) fails if enabled.
+            Enabled: false
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -1078,7 +1085,9 @@ Resources:
           Properties:
             Schedule: cron(0 3 * * ? *)
             Description: Daily roster sync at 3 AM UTC
-            Enabled: true
+            # R1: provider collection (IBJJF/JJWL) is paused in every stage.
+            # CI (backend/scripts/check-template-policy.ts) fails if enabled.
+            Enabled: false
     Metadata:
       BuildMethod: esbuild
       BuildProperties:

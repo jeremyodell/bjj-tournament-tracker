@@ -147,7 +147,6 @@ app.get('/api/tournaments/:id', (req, res, next) => {
 // Gym routes
 app.get('/api/gyms', wrapHandler(gymsHandler));
 app.get('/api/gyms/:org/:externalId', wrapHandler(gymsHandler));
-app.get('/api/gyms/:org/:externalId/roster/:tournamentId', wrapHandler(gymsHandler));
 
 // Wishlist routes
 app.get('/api/wishlist', wrapHandler(wishlistHandler));
@@ -257,7 +256,6 @@ app.listen(PORT, () => {
 ║    GET /api/tournaments/:id        Get single tournament   ║
 ║    GET /api/gyms                   Search gyms             ║
 ║    GET /api/gyms/:org/:id          Get gym details         ║
-║    GET /api/gyms/:org/:id/roster/:tid  Get gym roster      ║
 ║    POST /gym-sync                  Sync IBJJF gyms         ║
 ╚════════════════════════════════════════════════════════════╝
   `);

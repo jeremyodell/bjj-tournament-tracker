@@ -34,6 +34,12 @@ jobs:
         working-directory: backend
         run: npm ci
 
+      # R1 + R2 gate: fails if any provider schedule is enabled under any
+      # deploy parameter set, or if a non-catalog API route has no authorizer.
+      - name: Template policy check (schedules off, routes authorized)
+        working-directory: backend
+        run: npm run check:policy
+
       - name: Run unit tests
         working-directory: backend
         run: npm run test:unit

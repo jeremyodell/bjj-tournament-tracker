@@ -3,11 +3,7 @@
 import { use } from 'react';
 import Link from 'next/link';
 import { useTournament } from '@/hooks/useTournaments';
-import { useGymRosterBySourceId } from '@/hooks/useGymSearch';
-import { useAthletes } from '@/hooks/useAthletes';
-import { useAuthStore } from '@/stores/authStore';
 import { TournamentHero } from '@/components/tournaments/TournamentHero';
-import { GymRosterSection } from '@/components/tournaments/GymRosterSection';
 import { Footer } from '@/components/landing/Footer';
 
 interface TournamentDetailPageProps {
@@ -21,25 +17,9 @@ export default function TournamentDetailPage({ params }: TournamentDetailPagePro
   // Construct the tournament ID as stored in the database (e.g., "TOURN#JJWL#123")
   const tournamentId = `TOURN#${org.toUpperCase()}#${id}`;
 
-  const { isAuthenticated } = useAuthStore();
   const { data: tournament, isLoading: isTournamentLoading, error: tournamentError } = useTournament(tournamentId);
-  const { data: athletesData } = useAthletes();
-
-  // Get the first athlete's gym source ID if available
-  const primaryAthlete = athletesData?.athletes?.[0];
-  const gymSourceId = primaryAthlete?.gymSourceId;
-
-  // Construct tournament source ID for roster lookup (e.g., "JJWL#123")
-  const tournamentSourceId = `${org.toUpperCase()}#${id}`;
-
-  const {
-    data: gymRoster,
-    isLoading: isRosterLoading,
-    refetch: refetchRoster,
-    dataUpdatedAt,
-  } = useGymRosterBySourceId(gymSourceId, tournamentSourceId, {
-    enabled: isAuthenticated && !!gymSourceId,
-  });
+  // The gym roster section was removed in R0: the roster API exposed other
+  // gyms' athletes (minors) and has been taken down.
 
   // Loading state
   if (isTournamentLoading) {
@@ -114,18 +94,6 @@ export default function TournamentDetailPage({ params }: TournamentDetailPagePro
         {/* Tournament Hero */}
         <TournamentHero tournament={tournament} />
 
-        {/* Gym Roster Section - only show if user has a gym */}
-        {isAuthenticated && gymSourceId && (
-          <div className="container mx-auto max-w-7xl px-4 py-8">
-            <GymRosterSection
-              roster={gymRoster}
-              isLoading={isRosterLoading}
-              onRefresh={refetchRoster}
-              lastUpdatedAt={dataUpdatedAt}
-              org={tournament.org}
-            />
-          </div>
-        )}
       </main>
 
       <Footer />
